@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import DuoButton from '../../components/ui/DuoButton';
+import { getLeaderboard } from '../../services/authService';
 
 const ProfilePage = () => {
   const { user, logout } = useAuth();
+  const [rank, setRank] = useState('-');
 
   // Tạo avatar từ chữ cái đầu của tên
   const firstLetter = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
@@ -12,6 +14,40 @@ const ProfilePage = () => {
   const joinDate = user?.created_at ? new Date(user.created_at) : new Date();
   const joinMonth = joinDate.getMonth() + 1;
   const joinYear = joinDate.getFullYear();
+
+  // Tính Giải đấu (League) dựa trên XP
+  const xp = user?.xp || 0;
+  let leagueName = "Đồng";
+  let leagueIcon = "🥉";
+  let leagueColor = "#CD7F32";
+  
+  if (xp >= 500) {
+    leagueName = "Vàng";
+    leagueIcon = "🥇";
+    leagueColor = "#FFD700";
+  } else if (xp >= 100) {
+    leagueName = "Bạc";
+    leagueIcon = "🥈";
+    leagueColor = "#C0C0C0";
+  }
+
+  // Lấy Hạng
+  useEffect(() => {
+    const fetchRank = async () => {
+      try {
+        const board = await getLeaderboard();
+        const myIndex = board.findIndex(u => u.id === user?.id);
+        if (myIndex !== -1) {
+          setRank(myIndex + 1);
+        } else {
+          setRank('Chưa có');
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    if (user?.id) fetchRank();
+  }, [user?.id]);
 
   return (
     <div className="w-full flex flex-col bg-white min-h-full">
@@ -35,12 +71,7 @@ const ProfilePage = () => {
         </div>
       </div>
 
-      <div className="px-[16px] pb-[24px] border-b-2 border-[#E5E5E5]">
-        <div className="flex gap-[8px] mt-[8px]">
-          <span className="text-[14px] font-[600] text-[#777777]"><span className="text-[#4B4B4B] font-bold">12</span> Đang theo dõi</span>
-          <span className="text-[14px] font-[600] text-[#777777]"><span className="text-[#4B4B4B] font-bold">5</span> Người theo dõi</span>
-        </div>
-      </div>
+
 
       {/* Stats Section */}
       <div className="px-[16px] py-[24px] border-b-2 border-[#E5E5E5]">
@@ -50,7 +81,7 @@ const ProfilePage = () => {
           <div className="border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex gap-[12px] items-center">
             <div className="text-[#FF9600] text-[24px]">🔥</div>
             <div className="flex flex-col">
-              <span className="text-[18px] font-bold text-[#4B4B4B]">12</span>
+              <span className="text-[18px] font-bold text-[#4B4B4B]">{user?.streak || 0}</span>
               <span className="text-[13px] font-[600] text-[#AFAFAF]">Ngày streak</span>
             </div>
           </div>
@@ -58,24 +89,24 @@ const ProfilePage = () => {
           <div className="border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex gap-[12px] items-center">
             <div className="text-[#FFC800] text-[24px]">⚡</div>
             <div className="flex flex-col">
-              <span className="text-[18px] font-bold text-[#4B4B4B]">450</span>
+              <span className="text-[18px] font-bold text-[#4B4B4B]">{user?.xp || 0}</span>
               <span className="text-[13px] font-[600] text-[#AFAFAF]">Tổng XP</span>
             </div>
           </div>
           {/* League */}
           <div className="border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex gap-[12px] items-center">
-            <div className="text-[#CE82FF] text-[24px]">🛡️</div>
+            <div className="text-[24px]">{leagueIcon}</div>
             <div className="flex flex-col">
-              <span className="text-[18px] font-bold text-[#4B4B4B]">Bạc</span>
+              <span className="text-[18px] font-bold text-[#4B4B4B]" style={{ color: leagueColor }}>{leagueName}</span>
               <span className="text-[13px] font-[600] text-[#AFAFAF]">Giải đấu</span>
             </div>
           </div>
-          {/* Top 3 */}
+          {/* Rank */}
           <div className="border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex gap-[12px] items-center">
-            <div className="text-[#FFD900] text-[24px]">👑</div>
+            <div className="text-[#CE82FF] text-[24px]">🛡️</div>
             <div className="flex flex-col">
-              <span className="text-[18px] font-bold text-[#4B4B4B]">0</span>
-              <span className="text-[13px] font-[600] text-[#AFAFAF]">Lần Top 3</span>
+              <span className="text-[18px] font-bold text-[#4B4B4B]">{rank}</span>
+              <span className="text-[13px] font-[600] text-[#AFAFAF]">Xếp hạng</span>
             </div>
           </div>
         </div>

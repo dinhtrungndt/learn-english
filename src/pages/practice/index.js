@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DuoButton from '../../components/ui/DuoButton';
 import { getVocabulariesForReview, getAllVocabularies, reviewVocabulary } from '../../services/vocabService';
+import { recordStudySession } from '../../services/authService';
 import { playAudio } from '../../utils/speech';
 
 const PracticePage = () => {
@@ -150,6 +151,10 @@ const PracticePage = () => {
         return reviewVocabulary(vocab.id, isRemembered);
       });
       await Promise.all(promises);
+      
+      // Cộng XP và cập nhật Streak
+      await recordStudySession();
+      
     } catch (err) {
       console.error('Lỗi đồng bộ:', err);
     } finally {

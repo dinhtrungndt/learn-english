@@ -8,6 +8,7 @@ import HomePage from '../pages/home';
 import OnboardPage from '../pages/onboard';
 import ProfilePage from '../pages/profile';
 import PracticePage from '../pages/practice';
+import LeaderboardPage from '../pages/leaderboard';
 import AddWordPage from '../pages/vocabulary/AddWord';
 
 // Protected Route Wrapper
@@ -124,7 +125,7 @@ export const Routers = () => {
         />
 
         {/* Dummy Routes for tabs */}
-        <Route path="/leaderboard" element={<ProtectedRoute><MainLayout><HomePage /></MainLayout></ProtectedRoute>} />
+        <Route path="/leaderboard" element={<ProtectedRoute><MainLayout><LeaderboardPage /></MainLayout></ProtectedRoute>} />
         <Route path="/quests" element={<ProtectedRoute><MainLayout><HomePage /></MainLayout></ProtectedRoute>} />
 
         {/* Public Routes */}

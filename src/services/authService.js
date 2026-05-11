@@ -117,6 +117,33 @@ export const resetPassword = async (email, newPassword) => {
   }
 };
 
+// Ghi nhận 1 phiên học (Cộng XP và Streak)
+export const recordStudySession = async () => {
+  try {
+    const response = await apiClient.post('/auth/me/study-session');
+    const currentUser = getCurrentUser();
+    if (response.data) {
+      const updatedUser = { ...currentUser, ...response.data };
+      const encryptedUser = encryptData(updatedUser);
+      localStorage.setItem(AUTH_CONFIG.USER_KEY, encryptedUser);
+    }
+    return response.data;
+  } catch (error) {
+    console.error("Lỗi ghi nhận phiên học:", error);
+    return null;
+  }
+};
+
+// Lấy Bảng xếp hạng
+export const getLeaderboard = async () => {
+  try {
+    const response = await apiClient.get('/auth/leaderboard');
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || { detail: 'Lỗi lấy bảng xếp hạng' };
+  }
+};
+
 // Upload ảnh đại diện
 export const uploadAvatar = async (file) => {
   try {
