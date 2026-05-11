@@ -1,11 +1,11 @@
-import { BrowserRouter, Route, Routes, Navigate } from 'react-router-dom';
-import HomePage from '../pages/home';
-import OnboardPage from '../pages/onboard';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import Footer from '../components/footer';
+import Header from '../components/header';
+import { useAuth } from '../contexts/AuthContext';
 import LoginPage from '../pages/auth/Login';
 import SignupPage from '../pages/auth/Signup';
-import Header from '../components/header';
-import Footer from '../components/footer';
-import { useAuth } from '../contexts/AuthContext';
+import HomePage from '../pages/home';
+import OnboardPage from '../pages/onboard';
 import ProfilePage from '../pages/profile';
 
 // Protected Route Wrapper
@@ -27,7 +27,7 @@ const ProtectedRoute = ({ children }) => {
 // Public Route Wrapper (redirects to Home if already logged in)
 const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  
+
   if (loading) return null;
 
   if (isAuthenticated) {
@@ -67,25 +67,25 @@ export const Routers = () => {
     <BrowserRouter>
       <Routes>
         {/* Protected Routes */}
-        <Route 
-          path="/" 
+        <Route
+          path="/"
           element={
             <ProtectedRoute>
               <MainLayout>
                 <HomePage />
               </MainLayout>
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/profile" 
+        <Route
+          path="/profile"
           element={
             <ProtectedRoute>
               <MainLayout>
                 <ProfilePage />
               </MainLayout>
             </ProtectedRoute>
-          } 
+          }
         />
 
         {/* Dummy Routes for tabs */}
@@ -95,36 +95,36 @@ export const Routers = () => {
 
         {/* Public Routes */}
         <Route 
-          path="/onboard" 
+          path="/onboard"
           element={
             <PublicRoute>
               <AuthLayout>
                 <OnboardPage />
               </AuthLayout>
             </PublicRoute>
-          } 
+          }
         />
-        <Route 
-          path="/login" 
+        <Route
+          path="/login"
           element={
             <PublicRoute>
               <AuthLayout>
                 <LoginPage />
               </AuthLayout>
             </PublicRoute>
-          } 
+          }
         />
-        <Route 
-          path="/signup" 
+        <Route
+          path="/signup"
           element={
             <PublicRoute>
               <AuthLayout>
                 <SignupPage />
               </AuthLayout>
             </PublicRoute>
-          } 
+          }
         />
-        
+
         {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
