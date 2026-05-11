@@ -7,6 +7,8 @@ import SignupPage from '../pages/auth/Signup';
 import HomePage from '../pages/home';
 import OnboardPage from '../pages/onboard';
 import ProfilePage from '../pages/profile';
+import PracticePage from '../pages/practice';
+import AddWordPage from '../pages/vocabulary/AddWord';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -62,6 +64,17 @@ const AuthLayout = ({ children }) => {
   );
 };
 
+// Layout for screens without Header/Footer but protected (like Practice, AddWord)
+const FullScreenLayout = ({ children }) => {
+  return (
+    <div className="h-screen bg-gray-100 flex justify-center">
+      <div className="w-full max-w-[480px] bg-white h-screen flex flex-col shadow-2xl relative overflow-hidden">
+        {children}
+      </div>
+    </div>
+  );
+};
+
 export const Routers = () => {
   return (
     <BrowserRouter>
@@ -88,8 +101,29 @@ export const Routers = () => {
           }
         />
 
+        {/* Practice and Vocab Features */}
+        <Route 
+          path="/practice" 
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <PracticePage />
+              </MainLayout>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/add-word" 
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <AddWordPage />
+              </MainLayout>
+            </ProtectedRoute>
+          } 
+        />
+
         {/* Dummy Routes for tabs */}
-        <Route path="/practice" element={<ProtectedRoute><MainLayout><HomePage /></MainLayout></ProtectedRoute>} />
         <Route path="/leaderboard" element={<ProtectedRoute><MainLayout><HomePage /></MainLayout></ProtectedRoute>} />
         <Route path="/quests" element={<ProtectedRoute><MainLayout><HomePage /></MainLayout></ProtectedRoute>} />
 

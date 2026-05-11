@@ -1,338 +1,277 @@
-import { useState } from 'react';
-import Badge from '../../components/ui/Badge';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getAllVocabularies, deleteVocabulary, updateVocabulary } from '../../services/vocabService';
+import { playAudio } from '../../utils/speech';
 import DuoButton from '../../components/ui/DuoButton';
-import ProgressBar from '../../components/ui/ProgressBar';
-import SectionLabel from '../../components/ui/SectionLabel';
-import Toggle from '../../components/ui/Toggle';
 
 const HomePage = () => {
-  const [toggles, setToggles] = useState({ sound: true, anim: false });
-  const [activeLang, setActiveLang] = useState('Spanish');
+  const navigate = useNavigate();
+  const [vocabularies, setVocabularies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  const [editingVocab, setEditingVocab] = useState(null);
+  const [deletingVocab, setDeletingVocab] = useState(null); // Trạng thái xóa
+  const [editForm, setEditForm] = useState({ word: '', meaning: '', example: '' });
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    fetchVocabs();
+  }, []);
+
+  const fetchVocabs = async () => {
+    try {
+      setLoading(true);
+      const data = await getAllVocabularies();
+      setVocabularies(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteClick = (e, vocab) => {
+    e.stopPropagation();
+    setDeletingVocab(vocab);
+  };
+
+  const confirmDelete = async () => {
+    if (!deletingVocab) return;
+    try {
+      setIsDeleting(true);
+      await deleteVocabulary(deletingVocab.id);
+      setVocabularies(prev => prev.filter(v => v.id !== deletingVocab.id));
+      setDeletingVocab(null);
+    } catch (error) {
+      alert("Lỗi khi xóa từ vựng!");
+      console.error(error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const openEditModal = (e, vocab) => {
+    e.stopPropagation();
+    setEditingVocab(vocab);
+    setEditForm({ word: vocab.word, meaning: vocab.meaning, example: vocab.example || '' });
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!editForm.word.trim() || !editForm.meaning.trim()) {
+      alert("Vui lòng điền đủ từ và nghĩa.");
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      const updatedVocab = await updateVocabulary(editingVocab.id, editForm);
+      setVocabularies(prev => prev.map(v => v.id === updatedVocab.id ? updatedVocab : v));
+      setEditingVocab(null);
+    } catch (error) {
+      alert("Lỗi khi cập nhật từ vựng!");
+      console.error(error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
-    <div>
-      {/* Hero Section */}
-      <header className="pt-[32px] px-[20px] pb-[32px] text-center flex flex-col items-center" style={{ background: 'linear-gradient(to bottom, rgba(88, 204, 2, 0.08), white)' }}>
-        <h1 className="feather text-[28px] text-[#58CC02] mb-[16px]">Learn English by Zen</h1>
-        <p className="text-[15px] text-[#777777] leading-[1.5] mb-[32px]">
-          A comprehensive visual reference for the Learn English design system covering colors, typography, button variants, cards, and UI components.
-        </p>
-        <div className="flex flex-col gap-[12px] w-full max-w-[280px] justify-center">
-          <DuoButton variant="primary">Get Started</DuoButton>
-          <DuoButton variant="secondary">I already have an account</DuoButton>
-        </div>
-      </header>
-
-      {/* Main Grid */}
-      <main className="w-full grid grid-cols-1">
-
-        {/* Panel 1: Colors */}
-        <div className="grid-panel p-[28px_20px]" id="colors">
-          <SectionLabel text="Color Palette" />
-          <div className="grid grid-cols-3 gap-[12px]">
-            {[
-              { name: 'Green', hex: '#58CC02', rgb: 'rgb(88, 204, 2)' },
-              { name: 'Green Hover', hex: '#4BB200', rgb: 'rgb(75, 178, 0)' },
-              { name: 'Blue', hex: '#1CB0F6', rgb: 'rgb(28, 176, 246)' },
-              { name: 'Dark Blue', hex: '#100F3E', rgb: 'rgb(16, 15, 62)' },
-              { name: 'Red', hex: '#FF4B4B', rgb: '#FF4B4B' },
-              { name: 'Orange', hex: '#FF9600', rgb: '#FF9600' },
-              { name: 'Golden', hex: '#FFC800', rgb: '#FFC800' },
-              { name: 'Footer Green', hex: '#4EC604', rgb: '#4EC604' },
-              { name: 'Gray Text', hex: '#4B4B4B', rgb: 'rgb(75, 75, 75)' },
-              { name: 'Gray Light', hex: '#777777', rgb: 'rgb(119, 119, 119)' },
-              { name: 'Nav Text', hex: '#AFAFAF', rgb: 'rgb(175, 175, 175)' },
-              { name: 'Border', hex: '#E5E5E5', rgb: 'rgb(229, 229, 229)' },
-            ].map((color) => (
-              <div key={color.name} className="flex flex-col gap-[8px] group">
-                <div
-                  className="w-full aspect-square rounded-[12px] border border-black/5 transition-transform duration-200 group-hover:scale-105 group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
-                  style={{ backgroundColor: color.rgb }}
-                ></div>
-                <div>
-                  <div className="text-[12px] font-bold text-[#4B4B4B]">{color.name}</div>
-                  <div className="text-[10px] font-semibold text-[#777777] uppercase">{color.hex}</div>
-                </div>
+    <div className="w-full flex flex-col min-h-full pb-[40px] bg-[#F7F7F7] relative">
+      
+      {/* Banner / Vocab Cards */}
+      <div className="px-[16px] py-[24px]">
+        <div className="flex gap-[12px] overflow-x-auto snap-x hide-scrollbar pb-[8px]">
+          
+          <div 
+            className="min-w-[280px] flex-shrink-0 snap-center bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex flex-col gap-[8px] cursor-pointer hover:border-[#1CB0F6] transition-colors shadow-sm"
+            onClick={() => navigate('/practice')}
+          >
+            <div className="flex items-center justify-between mb-[4px]">
+              <div className="w-[40px] h-[40px] bg-[#1CB0F6]/10 text-[#1CB0F6] rounded-full flex items-center justify-center text-[20px]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
               </div>
-            ))}
+              <span className="bg-[#FF9600] text-white text-[12px] font-[800] uppercase px-[8px] py-[2px] rounded-[6px]">Luyện tập</span>
+            </div>
+            <h3 className="text-[16px] font-bold text-[#4B4B4B]">Ôn tập từ vựng</h3>
+            <p className="text-[13px] text-[#AFAFAF] font-[500]">Lật thẻ để đưa từ vựng vào trí nhớ dài hạn.</p>
           </div>
-        </div>
 
-        {/* Panel 2: Typography */}
-        <div className="grid-panel p-[28px_20px]" id="type">
-          <SectionLabel text="Typography" />
-          <div className="flex flex-col gap-[20px]">
-            {[
-              { size: '32px', weight: 'Feather', text: 'Display', className: 'text-[#58CC02] feather text-[32px]' },
-              { size: '28px', weight: 'Bold 700', text: 'Heading One', className: 'text-[#4B4B4B] font-bold text-[28px]' },
-              { size: '24px', weight: 'Feather', text: 'heading two', className: 'text-[#58CC02] feather text-[24px]' },
-              { size: '16px', weight: 'Medium 500', text: 'Body text for paragraphs and descriptions with comfortable reading line-height.', className: 'text-[#777777] font-medium text-[16px] leading-[1.6]' },
-              { size: '14px', weight: 'Bold 700', text: 'CAPTION LABEL', className: 'text-[#AFAFAF] font-bold text-[14px] uppercase tracking-[0.5px]' },
-              { size: '12px', weight: 'Semi 600', text: 'Small utility text for metadata and hints', className: 'text-[#777777] font-semibold text-[12px]' },
-            ].map((type, i) => (
-              <div key={i} className="flex flex-col gap-[4px]">
-                <div className="flex items-center gap-[8px] mb-[4px]">
-                  <div className="text-[#1CB0F6] text-[11px] font-bold">{type.size}</div>
-                  <div className="text-[#AFAFAF] text-[10px]">{type.weight}</div>
-                </div>
-                <div className={type.className}>{type.text}</div>
+          <div 
+            className="min-w-[280px] flex-shrink-0 snap-center bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex flex-col gap-[8px] cursor-pointer hover:border-[#58CC02] transition-colors shadow-sm"
+            onClick={() => navigate('/add-word')}
+          >
+            <div className="flex items-center justify-between mb-[4px]">
+              <div className="w-[40px] h-[40px] bg-[#58CC02]/10 text-[#58CC02] rounded-full flex items-center justify-center text-[20px]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               </div>
-            ))}
+            </div>
+            <h3 className="text-[16px] font-bold text-[#4B4B4B]">Thêm từ mới</h3>
+            <p className="text-[13px] text-[#AFAFAF] font-[500]">Lưu lại từ vựng bạn vừa gặp trên YouTube.</p>
           </div>
-        </div>
 
-        {/* Panel 3: Button Variants */}
-        <div className="grid-panel p-[28px_20px]" id="buttons">
-          <SectionLabel text="Button Variants" />
-          <div className="flex flex-col gap-[24px]">
-            {[
-              { label: 'Primary', buttons: [{ text: 'Get Started', var: 'primary' }, { text: 'Small', var: 'primary', size: 'small' }, { text: 'Disabled', var: 'primary', disabled: true }] },
-              { label: 'Secondary', buttons: [{ text: 'Learn More', var: 'secondary' }, { text: 'Small', var: 'secondary', size: 'small' }, { text: 'Disabled', var: 'secondary', disabled: true }] },
-              { label: 'Danger', buttons: [{ text: 'Delete', var: 'danger' }, { text: 'Remove', var: 'danger', size: 'small' }] },
-              { label: 'Ghost', buttons: [{ text: 'View All', var: 'ghost' }] },
-            ].map((row, i) => (
-              <div key={i} className="flex flex-col gap-[8px]">
-                <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#AFAFAF] shrink-0">{row.label}</div>
-                <div className="flex flex-wrap gap-[12px] w-full">
-                  {row.buttons.map((btn, j) => (
-                    <DuoButton key={j} variant={btn.var} size={btn.size} disabled={btn.disabled} className={btn.size === 'small' ? 'flex-none w-auto' : ''}>{btn.text}</DuoButton>
-                  ))}
-                </div>
-              </div>
-            ))}
+        </div>
+      </div>
+
+      {/* Vocabulary List */}
+      <div className="flex-1 flex flex-col px-[16px]">
+        <h2 className="text-[18px] font-bold text-[#4B4B4B] mb-[16px]">Từ vựng của bạn ({vocabularies.length})</h2>
+        
+        {loading ? (
+          <div className="flex justify-center py-[40px]">
+            <div className="animate-spin w-8 h-8 border-4 border-[#1CB0F6] border-t-transparent rounded-full"></div>
           </div>
-        </div>
-
-        {/* Panel 4: Dark Theme Buttons */}
-        <div className="grid-panel p-[28px_20px] bg-[#100F3E]">
-          <SectionLabel text="Dark Theme" dark />
-          <div className="flex flex-col gap-[24px]">
-            <div className="flex flex-col gap-[8px]">
-              <div className="text-[10px] font-bold uppercase tracking-[1px] text-white/35 shrink-0">Primary</div>
-              <div className="flex flex-col gap-[12px] w-full">
-                <DuoButton variant="dark-primary">Get Started</DuoButton>
-                <DuoButton variant="dark-primary">Try 1 Week Free</DuoButton>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-[12px] w-full">
-              <DuoButton variant="dark-primary" size="small" className="flex-none w-auto">Get Started</DuoButton>
-              <DuoButton variant="dark-primary" size="small" className="flex-none w-auto">Try 1 Week Free</DuoButton>
-            </div>
+        ) : vocabularies.length === 0 ? (
+          <div className="bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[24px] text-center flex flex-col items-center">
+            <span className="text-[40px] mb-[12px]">🌱</span>
+            <p className="text-[15px] font-[600] text-[#777777] mb-[8px]">Chưa có từ vựng nào</p>
+            <p className="text-[13px] text-[#AFAFAF] font-[500]">Hãy bấm nút "Thêm từ mới" để bắt đầu hành trình học nhé!</p>
           </div>
-        </div>
-
-        {/* Panel 5: Cards */}
-        <div className="grid-panel p-[28px_20px]" id="cards">
-          <SectionLabel text="Cards" />
-          <div className="grid grid-cols-1 gap-[16px]">
-            {/* Card 1 */}
-            <div className="bg-white border-2 border-[#E5E5E5] rounded-[16px] overflow-hidden transition-all duration-200 hover:-translate-y-[4px] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] flex flex-col">
-              <img src="https://images.pexels.com/photos/4145354/pexels-photo-4145354.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop" alt="Spanish" className="h-[120px] w-full object-cover" />
-              <div className="p-[16px] flex-1">
-                <div className="inline-block px-[8px] py-[3px] bg-[#58CC02]/10 text-[#58CC02] text-[11px] font-[800] uppercase rounded-[6px] mb-[8px]">New</div>
-                <h4 className="text-[16px] font-bold text-[#4B4B4B] mb-[4px]">Spanish for Beginners</h4>
-                <p className="text-[13px] text-[#777777] leading-[1.5]">Start your language journey with interactive lessons designed to build fluency.</p>
-              </div>
-              <div className="border-t-2 border-[#E5E5E5] px-[16px] py-[12px] flex items-center justify-between">
-                <span className="text-[12px] font-bold uppercase text-[#AFAFAF]">12 Units</span>
-                <button className="text-[12px] font-bold uppercase text-[#1CB0F6] hover:opacity-70 transition-opacity">Start</button>
-              </div>
-            </div>
-            {/* Card 2 */}
-            <div className="bg-white border-2 border-[#E5E5E5] rounded-[16px] overflow-hidden transition-all duration-200 hover:-translate-y-[4px] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] flex flex-col">
-              <img src="https://images.pexels.com/photos/267669/pexels-photo-267669.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop" alt="French" className="h-[120px] w-full object-cover" />
-              <div className="p-[16px] flex-1">
-                <div className="inline-block px-[8px] py-[3px] bg-[#1CB0F6]/10 text-[#1CB0F6] text-[11px] font-[800] uppercase rounded-[6px] mb-[8px]">Popular</div>
-                <h4 className="text-[16px] font-bold text-[#4B4B4B] mb-[4px]">French Conversations</h4>
-                <p className="text-[13px] text-[#777777] leading-[1.5]">Practice real-world dialogue and improve pronunciation with native speakers.</p>
-              </div>
-              <div className="border-t-2 border-[#E5E5E5] px-[16px] py-[12px] flex items-center justify-between">
-                <span className="text-[12px] font-bold uppercase text-[#AFAFAF]">8 Units</span>
-                <button className="text-[12px] font-bold uppercase text-[#1CB0F6] hover:opacity-70 transition-opacity">Continue</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Panel 6: Dark Theme Cards */}
-        <div className="grid-panel p-[28px_20px] bg-[#100F3E]">
-          <SectionLabel text="Dark Cards" dark />
-          <div className="grid grid-cols-1 gap-[16px]">
-            {/* Dark Card 1 */}
-            <div className="bg-white/5 border border-white/10 rounded-[16px] overflow-hidden transition-all duration-200 hover:-translate-y-[4px] hover:shadow-[0_12px_32px_rgba(0,0,0,0.2)] flex flex-col">
-              <div className="p-[20px] flex-1">
-                <div className="inline-block px-[8px] py-[3px] bg-[#FFC800]/15 text-[#FFC800] text-[11px] font-[800] uppercase rounded-[6px] mb-[12px]">Super</div>
-                <h4 className="text-[16px] font-bold text-white mb-[8px]">Unlimited Hearts</h4>
-                <p className="text-[13px] text-white/50 leading-[1.5]">Keep learning without interruption with Zen Premium benefits.</p>
-              </div>
-              <div className="border-t border-white/10 px-[20px] py-[16px] flex items-center justify-between">
-                <span className="text-[12px] font-bold uppercase text-white/30">Premium</span>
-                <button className="text-[12px] font-bold uppercase text-white hover:text-[#FFC800] transition-colors">Upgrade</button>
-              </div>
-            </div>
-            {/* Dark Card 2 */}
-            <div className="bg-white/5 border border-white/10 rounded-[16px] overflow-hidden transition-all duration-200 hover:-translate-y-[4px] hover:shadow-[0_12px_32px_rgba(0,0,0,0.2)] flex flex-col">
-              <div className="p-[20px] flex-1">
-                <div className="inline-block px-[8px] py-[3px] bg-[#FF9600]/15 text-[#FF9600] text-[11px] font-[800] uppercase rounded-[6px] mb-[12px]">Pro</div>
-                <h4 className="text-[16px] font-bold text-white mb-[8px]">Mastery Quizzes</h4>
-                <p className="text-[13px] text-white/50 leading-[1.5]">Challenge yourself with advanced assessments to test your skill level.</p>
-              </div>
-              <div className="border-t border-white/10 px-[20px] py-[16px] flex items-center justify-between">
-                <span className="text-[12px] font-bold uppercase text-white/30">Advanced</span>
-                <button className="text-[12px] font-bold uppercase text-white hover:text-[#FF9600] transition-colors">Try Now</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Panel 7: Components */}
-        <div className="grid-panel p-[28px_20px]" id="components">
-          <SectionLabel text="Components" />
-          <div className="flex flex-col gap-[28px]">
-
-            {/* Badges */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#AFAFAF] mb-[12px]">Badges</div>
-              <div className="flex flex-wrap gap-[8px]">
-                <Badge text="Completed" colorHex="green" />
-                <Badge text="In Progress" colorHex="blue" />
-                <Badge text="Failed" colorHex="red" />
-                <Badge text="Streak" colorHex="orange" />
-                <Badge text="Premium" colorHex="golden" />
-              </div>
-            </div>
-
-            {/* Input + Button */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#AFAFAF] mb-[12px]">Form Elements</div>
-              <div className="flex flex-col gap-[12px]">
-                <input
-                  type="text"
-                  placeholder="Enter your email"
-                  className="w-full h-[48px] px-[16px] border-2 border-[#E5E5E5] rounded-[12px] text-[15px] font-[600] text-[#4B4B4B] placeholder:text-[#AFAFAF] placeholder:font-[500] focus:border-[#1CB0F6] focus:outline-none transition-colors"
-                />
-                <DuoButton variant="primary">Subscribe</DuoButton>
-              </div>
-            </div>
-
-            {/* Toggles */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#AFAFAF] mb-[12px]">Toggles</div>
-              <div className="flex flex-col gap-[16px]">
-                <Toggle checked={toggles.sound} onChange={() => setToggles(p => ({ ...p, sound: !p.sound }))} label="Sound effects" />
-                <Toggle checked={toggles.anim} onChange={() => setToggles(p => ({ ...p, anim: !p.anim }))} label="Animations" />
-              </div>
-            </div>
-
-            {/* Progress */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#AFAFAF] mb-[12px]">Progress Bars</div>
-              <div className="flex flex-col gap-[16px]">
-                <ProgressBar progress={85} colorClass="bg-[#58CC02]" />
-                <ProgressBar progress={60} colorClass="bg-[#1CB0F6]" />
-                <ProgressBar progress={35} colorClass="bg-[#FF9600]" />
-              </div>
-            </div>
-
-            {/* Tooltip & Streak */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#AFAFAF] mb-[12px]">Interactions & Meta</div>
-              <div className="flex items-center gap-[24px]">
-
-                {/* Tooltip */}
-                <div className="relative group cursor-pointer">
-                  <div className="text-[13px] font-bold text-[#58CC02] bg-[#58CC02]/10 px-[16px] py-[8px] rounded-[8px]">
-                    Hover me
-                  </div>
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-[10px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10 w-max">
-                    <div className="bg-[#100F3E] text-white text-[12px] font-[600] px-[12px] py-[6px] rounded-[8px] tooltip-arrow">
-                      I am a tooltip!
-                    </div>
-                  </div>
-                </div>
-
-                {/* Streak */}
-                <div className="inline-flex items-center gap-[6px] bg-[#FF9600]/10 px-[14px] py-[6px] rounded-[20px]">
-                  <span className="text-[18px]">🔥</span>
-                  <span className="text-[16px] font-[800] text-[#FF9600]">42</span>
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Panel 8: Dark Components */}
-        <div className="grid-panel p-[28px_20px] bg-[#100F3E]">
-          <SectionLabel text="Dark Components" dark />
-          <div className="flex flex-col gap-[28px]">
-
-            {/* Language Pills */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[1px] text-white/30 mb-[12px]">Language Selection</div>
-              <div className="flex flex-wrap gap-[8px]">
-                {[
-                  { name: 'Spanish', flag: '59a90a2cedd48b751a8fd22014768fd7.svg' },
-                  { name: 'French', flag: '482fda142ee4abd728ebf4ccce5d3307.svg' },
-                  { name: 'German', flag: 'c71db846ffab7e0a74bc6971e34ad82e.svg' },
-                  { name: 'Japanese', flag: 'edea4fa18ff3e7d8c0282de3f102aaed.svg' }
-                ].map((lang) => {
-                  const isActive = activeLang === lang.name;
-                  return (
-                    <div
-                      key={lang.name}
-                      onClick={() => setActiveLang(lang.name)}
-                      className={`inline-flex items-center gap-[6px] px-[12px] py-[6px] rounded-[12px] border-2 cursor-pointer transition-colors ${isActive ? 'border-[#58CC02] bg-[#58CC02]/10 text-white' : 'border-white/10 text-white/70 hover:border-[#58CC02] hover:bg-[#58CC02]/5'
-                        }`}
+        ) : (
+          <div className="flex flex-col gap-[12px]">
+            {vocabularies.map((vocab) => (
+              <div key={vocab.id} className="bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex flex-col hover:border-[#1CB0F6] transition-colors cursor-pointer group">
+                <div className="flex justify-between items-start mb-[8px]">
+                  <div className="flex items-center gap-[12px]">
+                    <h3 className="text-[18px] font-bold text-[#4B4B4B]">{vocab.word}</h3>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); playAudio(vocab.word); }}
+                      className="w-[32px] h-[32px] bg-[#1CB0F6]/10 text-[#1CB0F6] rounded-[8px] flex items-center justify-center hover:bg-[#1CB0F6]/20 transition-colors"
                     >
-                      <img src={`https://d35aaqx5ub95lt.cloudfront.net/vendor/${lang.flag}`} alt={lang.name} className="w-[24px] h-[18px] object-contain rounded-[2px]" />
-                      <span className="text-[13px] font-bold">{lang.name}</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-[8px]">
+                    <span className="text-[12px] font-[700] text-[#1CB0F6] bg-[#1CB0F6]/10 px-[8px] py-[4px] rounded-[8px]">
+                      Cấp độ {vocab.level}
+                    </span>
+                    
+                    {/* Action Menu (Edit/Delete) */}
+                    <div className="flex gap-[4px] ml-[4px]">
+                      <button 
+                        onClick={(e) => openEditModal(e, vocab)}
+                        className="w-[28px] h-[28px] flex items-center justify-center text-[#AFAFAF] hover:text-[#1CB0F6] bg-[#F7F7F7] rounded-[6px] transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                      </button>
+                      <button 
+                        onClick={(e) => handleDeleteClick(e, vocab)}
+                        className="w-[28px] h-[28px] flex items-center justify-center text-[#AFAFAF] hover:text-[#FF4B4B] bg-[#F7F7F7] rounded-[6px] transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      </button>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Avatar Group */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[1px] text-white/30 mb-[12px]">Leaderboard Avatars</div>
-              <div className="flex items-center">
-                <div className="flex">
-                  <img src="https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" className="w-[36px] h-[36px] rounded-full border-2 border-white object-cover" alt="User 1" />
-                  <img src="https://images.pexels.com/photos/1222271/pexels-photo-1222271.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" className="w-[36px] h-[36px] rounded-full border-2 border-white object-cover -ml-[8px]" alt="User 2" />
-                  <img src="https://images.pexels.com/photos/733872/pexels-photo-733872.jpeg?auto=compress&cs=tinysrgb&w=80&h=80&fit=crop" className="w-[36px] h-[36px] rounded-full border-2 border-white object-cover -ml-[8px]" alt="User 3" />
-                  <div className="w-[36px] h-[36px] rounded-full border-2 border-white bg-[#f0f0f0] flex items-center justify-center text-[11px] font-[800] text-[#777777] -ml-[8px] z-10">
-                    +5
                   </div>
                 </div>
-                <span className="ml-[12px] text-[13px] font-[600] text-white/50">8 learners</span>
+                <p className="text-[15px] font-[600] text-[#777777] mb-[8px]">{vocab.meaning}</p>
+                {vocab.example && (
+                  <p className="text-[13px] font-[500] text-[#AFAFAF] italic">"{vocab.example}"</p>
+                )}
               </div>
-            </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-            {/* Progress Dark */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[1px] text-white/30 mb-[12px]">Stats Progress</div>
-              <div className="flex flex-col gap-[16px]">
-                <ProgressBar progress={72} colorClass="bg-[#FFC800]" dark />
-                <ProgressBar progress={45} colorClass="bg-[#58CC02]" dark />
+      {/* Edit Modal */}
+      {editingVocab && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-[16px]">
+          <div className="bg-white rounded-[24px] w-full max-w-[400px] p-[24px] shadow-lg animate-fade-in">
+            <div className="flex justify-between items-center mb-[20px]">
+              <h2 className="text-[20px] font-bold text-[#4B4B4B]">Sửa từ vựng</h2>
+              <button 
+                onClick={() => setEditingVocab(null)}
+                className="w-[32px] h-[32px] flex items-center justify-center text-[#AFAFAF] hover:text-[#4B4B4B]"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            
+            <form onSubmit={handleUpdate} className="flex flex-col gap-[16px]">
+              <div>
+                <label className="block text-[14px] font-[700] text-[#777777] mb-[8px] uppercase tracking-wider">Từ tiếng Anh <span className="text-[#FF4B4B]">*</span></label>
+                <input 
+                  type="text" 
+                  required
+                  value={editForm.word}
+                  onChange={(e) => setEditForm({...editForm, word: e.target.value})}
+                  className="w-full bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[16px] px-[16px] py-[12px] text-[16px] font-[600] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-colors"
+                  placeholder="Ví dụ: Hello"
+                />
               </div>
-            </div>
 
-            {/* Badges Dark */}
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[1px] text-white/30 mb-[12px]">Achievements</div>
-              <div className="flex flex-wrap gap-[8px]">
-                <Badge text="Mastered" colorHex="green" dark />
-                <Badge text="Review" colorHex="blue" dark />
-                <Badge text="Crown" colorHex="golden" dark />
+              <div>
+                <label className="block text-[14px] font-[700] text-[#777777] mb-[8px] uppercase tracking-wider">Nghĩa tiếng Việt <span className="text-[#FF4B4B]">*</span></label>
+                <input 
+                  type="text" 
+                  required
+                  value={editForm.meaning}
+                  onChange={(e) => setEditForm({...editForm, meaning: e.target.value})}
+                  className="w-full bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[16px] px-[16px] py-[12px] text-[16px] font-[600] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-colors"
+                  placeholder="Ví dụ: Xin chào"
+                />
               </div>
-            </div>
 
+              <div>
+                <label className="block text-[14px] font-[700] text-[#777777] mb-[8px] uppercase tracking-wider">Câu ví dụ (Không bắt buộc)</label>
+                <textarea 
+                  rows="3"
+                  value={editForm.example}
+                  onChange={(e) => setEditForm({...editForm, example: e.target.value})}
+                  className="w-full bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[16px] px-[16px] py-[12px] text-[16px] font-[500] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-colors resize-none"
+                  placeholder="Ví dụ: Hello, how are you?"
+                />
+              </div>
+
+              <DuoButton 
+                type="submit" 
+                variant="primary" 
+                className="w-full mt-[8px]"
+                disabled={isSaving}
+              >
+                {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </DuoButton>
+            </form>
           </div>
         </div>
+      )}
 
-      </main>
+      {/* Delete Confirmation Modal */}
+      {deletingVocab && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-[16px]">
+          <div className="bg-white rounded-[24px] w-full max-w-[340px] p-[24px] shadow-lg animate-fade-in text-center flex flex-col items-center">
+            <div className="w-[64px] h-[64px] bg-[#FF4B4B]/10 text-[#FF4B4B] rounded-full flex items-center justify-center mb-[16px]">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            </div>
+            
+            <h2 className="text-[20px] font-bold text-[#4B4B4B] mb-[8px]">Xóa từ vựng này?</h2>
+            <p className="text-[15px] font-[500] text-[#777777] mb-[24px]">
+              Bạn đang xóa từ <span className="font-bold text-[#4B4B4B]">"{deletingVocab.word}"</span>. Mọi quá trình học của từ này sẽ bị mất vĩnh viễn.
+            </p>
+            
+            <div className="flex flex-col gap-[12px] w-full">
+              <DuoButton 
+                variant="danger" 
+                className="w-full"
+                onClick={confirmDelete}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Đang xóa...' : 'Xóa luôn'}
+              </DuoButton>
+              <DuoButton 
+                variant="ghost" 
+                className="w-full border-2 border-[#E5E5E5]"
+                onClick={() => setDeletingVocab(null)}
+                disabled={isDeleting}
+              >
+                Giữ lại
+              </DuoButton>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
