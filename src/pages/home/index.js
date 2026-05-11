@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAllVocabularies, deleteVocabulary, updateVocabulary } from '../../services/vocabService';
-import { getCategories } from '../../services/categoryService';
+import { getCategories, createCategory, deleteCategory } from '../../services/categoryService';
 import { playAudio } from '../../utils/speech';
 import DuoButton from '../../components/ui/DuoButton';
 
@@ -17,6 +17,11 @@ const HomePage = () => {
   const [editForm, setEditForm] = useState({ word: '', meaning: '', example: '' });
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Category management states
+  const [showManageCategories, setShowManageCategories] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [isAddingCategory, setIsAddingCategory] = useState(false);
 
   useEffect(() => {
     fetchVocabs();
@@ -81,6 +86,33 @@ const HomePage = () => {
     }
   };
 
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) return;
+    try {
+      setIsAddingCategory(true);
+      const newCat = await createCategory(newCategoryName.trim());
+      setCategories(prev => [...prev, newCat]);
+      setNewCategoryName('');
+    } catch (error) {
+      alert("Lỗi khi thêm thư mục!");
+    } finally {
+      setIsAddingCategory(false);
+    }
+  };
+
+  const handleDeleteCategory = async (id) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa thư mục này? Các từ vựng sẽ không bị xóa nhưng sẽ không còn thuộc thư mục này.")) return;
+    try {
+      await deleteCategory(id);
+      setCategories(prev => prev.filter(c => c.id !== id));
+      if (activeCategory === id) setActiveCategory('all');
+      // Refresh vocab list to update items that belonged to deleted category
+      fetchVocabs();
+    } catch (error) {
+      alert("Lỗi khi xóa thư mục!");
+    }
+  };
+
   return (
     <div className="w-full flex flex-col min-h-full pb-[40px] bg-[#F7F7F7] relative">
 
@@ -121,12 +153,14 @@ const HomePage = () => {
       {/* Vocabulary List */}
       <div className="flex-1 flex flex-col px-[16px]">
         {/* Category Filter Tabs */}
-        {categories.length > 0 && (
-          <div className="flex gap-[8px] overflow-x-auto pb-[8px] mb-[12px] no-scrollbar">
+        <div className="flex items-center gap-[8px] mb-[12px]">
+          <div className="flex-1 flex gap-[8px] overflow-x-auto pb-[4px] no-scrollbar">
             <button
               onClick={() => setActiveCategory('all')}
-              className={`shrink-0 px-[14px] py-[6px] rounded-full text-[13px] font-[700] transition-colors ${
-                activeCategory === 'all' ? 'bg-[#1CB0F6] text-white' : 'bg-[#F7F7F7] text-[#777777] hover:bg-[#E5E5E5]'
+              className={`shrink-0 px-[14px] py-[6px] rounded-full text-[13px] font-[700] transition-colors border-2 ${
+                activeCategory === 'all' 
+                  ? 'bg-[#1CB0F6] border-[#1CB0F6] text-white' 
+                  : 'bg-white border-[#E5E5E5] text-[#777777] hover:border-[#1CB0F6]'
               }`}
             >
               📁 Tất cả
@@ -135,21 +169,30 @@ const HomePage = () => {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id)}
-                className={`shrink-0 px-[14px] py-[6px] rounded-full text-[13px] font-[700] transition-colors ${
-                  activeCategory === cat.id ? 'bg-[#1CB0F6] text-white' : 'bg-[#F7F7F7] text-[#777777] hover:bg-[#E5E5E5]'
+                className={`shrink-0 px-[14px] py-[6px] rounded-full text-[13px] font-[700] transition-colors border-2 ${
+                  activeCategory === cat.id 
+                    ? 'bg-[#1CB0F6] border-[#1CB0F6] text-white' 
+                    : 'bg-white border-[#E5E5E5] text-[#777777] hover:border-[#1CB0F6]'
                 }`}
               >
                 📂 {cat.name}
               </button>
             ))}
           </div>
-        )}
+          
+          <button 
+            onClick={() => setShowManageCategories(true)}
+            className="w-[36px] h-[36px] shrink-0 bg-white border-2 border-[#E5E5E5] rounded-full flex items-center justify-center text-[#AFAFAF] hover:text-[#1CB0F6] hover:border-[#1CB0F6] transition-all"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </button>
+        </div>
 
         {/* Vocab count */}
         <h2 className="text-[18px] font-bold text-[#4B4B4B] mb-[16px]">
           {activeCategory === 'all'
             ? `Từ vựng của bạn (${vocabularies.length})`
-            : `${categories.find(c => c.id === activeCategory)?.name} (${
+            : `${categories.find(c => c.id === activeCategory)?.name || 'Thư mục'} (${
                 vocabularies.filter(v => v.category_id === activeCategory).length
               })`
           }
@@ -167,7 +210,10 @@ const HomePage = () => {
           </div>
         ) : (
           <div className="flex flex-col gap-[12px]">
-            {(activeCategory === 'all' ? vocabularies : vocabularies.filter(v => v.category_id === activeCategory)).map((vocab) => (
+            {(activeCategory === 'all' 
+              ? vocabularies 
+              : vocabularies.filter(v => v.category_id === activeCategory)
+            ).map((vocab) => (
               <div key={vocab.id} className="bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex flex-col hover:border-[#1CB0F6] transition-colors cursor-pointer group">
                 <div className="flex justify-between items-start mb-[8px]">
                   <div className="flex items-center gap-[12px]">
@@ -184,7 +230,6 @@ const HomePage = () => {
                       Cấp độ {vocab.level}
                     </span>
 
-                    {/* Action Menu (Edit/Delete) */}
                     <div className="flex gap-[4px] ml-[4px]">
                       <button
                         onClick={(e) => openEditModal(e, vocab)}
@@ -304,6 +349,63 @@ const HomePage = () => {
               >
                 Giữ lại
               </DuoButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Categories Modal */}
+      {showManageCategories && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-[16px]">
+          <div className="bg-white rounded-[24px] w-full max-w-[400px] p-[24px] shadow-lg animate-fade-in flex flex-col max-h-[80vh]">
+            <div className="flex justify-between items-center mb-[20px]">
+              <h2 className="text-[20px] font-bold text-[#4B4B4B]">Quản lý thư mục</h2>
+              <button
+                onClick={() => setShowManageCategories(false)}
+                className="w-[32px] h-[32px] flex items-center justify-center text-[#AFAFAF] hover:text-[#4B4B4B]"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+
+            <div className="flex gap-[8px] mb-[20px]">
+              <input
+                type="text"
+                className="flex-1 bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[16px] px-[16px] py-[10px] text-[15px] font-[600] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-all"
+                placeholder="Tên thư mục mới..."
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+              />
+              <button
+                onClick={handleAddCategory}
+                disabled={isAddingCategory || !newCategoryName.trim()}
+                className="bg-[#1CB0F6] text-white w-[44px] h-[44px] rounded-[16px] flex items-center justify-center hover:opacity-80 disabled:opacity-50 transition-all shadow-[0_4px_0_0_#1899D6] active:shadow-none active:translate-y-[2px]"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto pr-[4px] custom-scrollbar">
+              <div className="flex flex-col gap-[8px]">
+                {categories.length === 0 ? (
+                  <p className="text-center text-[#AFAFAF] py-[20px] font-[500]">Chưa có thư mục nào</p>
+                ) : (
+                  categories.map(cat => (
+                    <div key={cat.id} className="flex items-center justify-between p-[12px] bg-[#F7F7F7] rounded-[16px] border-2 border-transparent hover:border-[#E5E5E5] transition-all">
+                      <div className="flex items-center gap-[10px]">
+                        <span className="text-[18px]">📂</span>
+                        <span className="text-[15px] font-[700] text-[#4B4B4B]">{cat.name}</span>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteCategory(cat.id)}
+                        className="text-[#AFAFAF] hover:text-[#FF4B4B] p-[4px] transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
