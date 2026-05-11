@@ -10,26 +10,26 @@ const HomePage = () => {
   const [activeLang, setActiveLang] = useState('Spanish');
 
   return (
-    <div className="pt-[64px]">
+    <div>
       {/* Hero Section */}
-      <header className="pt-[32px] min-[600px]:pt-[56px] px-[20px] min-[600px]:px-[40px] pb-[32px] min-[600px]:pb-[40px] text-center flex flex-col items-center" style={{ background: 'linear-gradient(to bottom, rgba(88, 204, 2, 0.08), white)' }}>
-        <h1 className="feather text-[28px] min-[600px]:text-[36px] min-[900px]:text-[52px] text-[#58CC02] mb-[16px]">duolingo design</h1>
-        <p className="text-[17px] text-[#777777] max-w-[520px] leading-[1.5] mb-[32px]">
-          A comprehensive visual reference for the Duolingo design system covering colors, typography, button variants, cards, and UI components.
+      <header className="pt-[32px] px-[20px] pb-[32px] text-center flex flex-col items-center" style={{ background: 'linear-gradient(to bottom, rgba(88, 204, 2, 0.08), white)' }}>
+        <h1 className="feather text-[28px] text-[#58CC02] mb-[16px]">Learn English by Zen</h1>
+        <p className="text-[15px] text-[#777777] leading-[1.5] mb-[32px]">
+          A comprehensive visual reference for the Learn English design system covering colors, typography, button variants, cards, and UI components.
         </p>
-        <div className="flex flex-col min-[900px]:flex-row gap-[16px] w-full max-w-[280px] min-[900px]:max-w-none justify-center">
+        <div className="flex flex-col gap-[12px] w-full max-w-[280px] justify-center">
           <DuoButton variant="primary">Get Started</DuoButton>
           <DuoButton variant="secondary">I already have an account</DuoButton>
         </div>
       </header>
 
       {/* Main Grid */}
-      <main className="max-w-[1440px] mx-auto grid grid-cols-1 min-[900px]:grid-cols-2">
+      <main className="w-full grid grid-cols-1">
 
         {/* Panel 1: Colors */}
-        <div className="grid-panel p-[28px_20px] min-[600px]:p-[36px_40px]" id="colors">
+        <div className="grid-panel p-[28px_20px]" id="colors">
           <SectionLabel text="Color Palette" />
-          <div className="grid grid-cols-3 min-[600px]:grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-[12px]">
+          <div className="grid grid-cols-3 gap-[12px]">
             {[
               { name: 'Green', hex: '#58CC02', rgb: 'rgb(88, 204, 2)' },
               { name: 'Green Hover', hex: '#4BB200', rgb: 'rgb(75, 178, 0)' },
@@ -59,19 +59,19 @@ const HomePage = () => {
         </div>
 
         {/* Panel 2: Typography */}
-        <div className="grid-panel p-[28px_20px] min-[600px]:p-[36px_40px]" id="type">
+        <div className="grid-panel p-[28px_20px]" id="type">
           <SectionLabel text="Typography" />
           <div className="flex flex-col gap-[20px]">
             {[
-              { size: '48px', weight: 'Feather Bold', text: 'Display', className: 'text-[#58CC02] feather text-[32px] min-[600px]:text-[48px]' },
-              { size: '32px', weight: 'Bold 700', text: 'Heading One', className: 'text-[#4B4B4B] font-bold text-[28px] min-[600px]:text-[32px]' },
-              { size: '28px', weight: 'Feather Bold', text: 'heading two', className: 'text-[#58CC02] feather text-[24px] min-[600px]:text-[28px]' },
-              { size: '18px', weight: 'Medium 500', text: 'Body text for paragraphs and descriptions with comfortable reading line-height.', className: 'text-[#777777] font-medium text-[16px] min-[600px]:text-[18px] leading-[1.6]' },
+              { size: '32px', weight: 'Feather', text: 'Display', className: 'text-[#58CC02] feather text-[32px]' },
+              { size: '28px', weight: 'Bold 700', text: 'Heading One', className: 'text-[#4B4B4B] font-bold text-[28px]' },
+              { size: '24px', weight: 'Feather', text: 'heading two', className: 'text-[#58CC02] feather text-[24px]' },
+              { size: '16px', weight: 'Medium 500', text: 'Body text for paragraphs and descriptions with comfortable reading line-height.', className: 'text-[#777777] font-medium text-[16px] leading-[1.6]' },
               { size: '14px', weight: 'Bold 700', text: 'CAPTION LABEL', className: 'text-[#AFAFAF] font-bold text-[14px] uppercase tracking-[0.5px]' },
               { size: '12px', weight: 'Semi 600', text: 'Small utility text for metadata and hints', className: 'text-[#777777] font-semibold text-[12px]' },
             ].map((type, i) => (
-              <div key={i} className="flex items-baseline gap-[20px]">
-                <div className="w-[80px] text-right hidden min-[600px]:block shrink-0">
+              <div key={i} className="flex flex-col gap-[4px]">
+                <div className="flex items-center gap-[8px] mb-[4px]">
                   <div className="text-[#1CB0F6] text-[11px] font-bold">{type.size}</div>
                   <div className="text-[#AFAFAF] text-[10px]">{type.weight}</div>
                 </div>
@@ -82,20 +82,20 @@ const HomePage = () => {
         </div>
 
         {/* Panel 3: Button Variants */}
-        <div className="grid-panel p-[28px_20px] min-[600px]:p-[36px_40px]" id="buttons">
+        <div className="grid-panel p-[28px_20px]" id="buttons">
           <SectionLabel text="Button Variants" />
-          <div className="flex flex-col gap-[16px]">
+          <div className="flex flex-col gap-[24px]">
             {[
               { label: 'Primary', buttons: [{ text: 'Get Started', var: 'primary' }, { text: 'Small', var: 'primary', size: 'small' }, { text: 'Disabled', var: 'primary', disabled: true }] },
               { label: 'Secondary', buttons: [{ text: 'Learn More', var: 'secondary' }, { text: 'Small', var: 'secondary', size: 'small' }, { text: 'Disabled', var: 'secondary', disabled: true }] },
               { label: 'Danger', buttons: [{ text: 'Delete', var: 'danger' }, { text: 'Remove', var: 'danger', size: 'small' }] },
               { label: 'Ghost', buttons: [{ text: 'View All', var: 'ghost' }] },
             ].map((row, i) => (
-              <div key={i} className="flex flex-col min-[600px]:flex-row min-[600px]:items-center gap-[12px]">
-                <div className="w-[80px] text-[10px] font-bold uppercase tracking-[1px] text-[#AFAFAF] shrink-0 hidden min-[600px]:block">{row.label}</div>
+              <div key={i} className="flex flex-col gap-[8px]">
+                <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#AFAFAF] shrink-0">{row.label}</div>
                 <div className="flex flex-wrap gap-[12px] w-full">
                   {row.buttons.map((btn, j) => (
-                    <DuoButton key={j} variant={btn.var} size={btn.size} disabled={btn.disabled}>{btn.text}</DuoButton>
+                    <DuoButton key={j} variant={btn.var} size={btn.size} disabled={btn.disabled} className={btn.size === 'small' ? 'flex-none w-auto' : ''}>{btn.text}</DuoButton>
                   ))}
                 </div>
               </div>
@@ -104,30 +104,27 @@ const HomePage = () => {
         </div>
 
         {/* Panel 4: Dark Theme Buttons */}
-        <div className="grid-panel p-[28px_20px] min-[600px]:p-[36px_40px] bg-[#100F3E]">
+        <div className="grid-panel p-[28px_20px] bg-[#100F3E]">
           <SectionLabel text="Dark Theme" dark />
-          <div className="flex flex-col gap-[16px]">
-            <div className="flex flex-col min-[600px]:flex-row min-[600px]:items-center gap-[12px]">
-              <div className="w-[80px] text-[10px] font-bold uppercase tracking-[1px] text-white/35 shrink-0 hidden min-[600px]:block">Primary</div>
-              <div className="flex flex-wrap gap-[12px] w-full">
+          <div className="flex flex-col gap-[24px]">
+            <div className="flex flex-col gap-[8px]">
+              <div className="text-[10px] font-bold uppercase tracking-[1px] text-white/35 shrink-0">Primary</div>
+              <div className="flex flex-col gap-[12px] w-full">
                 <DuoButton variant="dark-primary">Get Started</DuoButton>
                 <DuoButton variant="dark-primary">Try 1 Week Free</DuoButton>
               </div>
             </div>
-            <div className="flex flex-col min-[600px]:flex-row min-[600px]:items-center gap-[12px]">
-              <div className="w-[80px] shrink-0 hidden min-[600px]:block"></div>
-              <div className="flex flex-wrap gap-[12px] w-full">
-                <DuoButton variant="dark-primary" size="small">Get Started</DuoButton>
-                <DuoButton variant="dark-primary" size="small">Try 1 Week Free</DuoButton>
-              </div>
+            <div className="flex flex-wrap gap-[12px] w-full">
+              <DuoButton variant="dark-primary" size="small" className="flex-none w-auto">Get Started</DuoButton>
+              <DuoButton variant="dark-primary" size="small" className="flex-none w-auto">Try 1 Week Free</DuoButton>
             </div>
           </div>
         </div>
 
         {/* Panel 5: Cards */}
-        <div className="grid-panel p-[28px_20px] min-[600px]:p-[36px_40px]" id="cards">
+        <div className="grid-panel p-[28px_20px]" id="cards">
           <SectionLabel text="Cards" />
-          <div className="grid grid-cols-1 min-[900px]:grid-cols-2 gap-[16px]">
+          <div className="grid grid-cols-1 gap-[16px]">
             {/* Card 1 */}
             <div className="bg-white border-2 border-[#E5E5E5] rounded-[16px] overflow-hidden transition-all duration-200 hover:-translate-y-[4px] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] flex flex-col">
               <img src="https://images.pexels.com/photos/4145354/pexels-photo-4145354.jpeg?auto=compress&cs=tinysrgb&w=400&h=200&fit=crop" alt="Spanish" className="h-[120px] w-full object-cover" />
@@ -158,15 +155,15 @@ const HomePage = () => {
         </div>
 
         {/* Panel 6: Dark Theme Cards */}
-        <div className="grid-panel p-[28px_20px] min-[600px]:p-[36px_40px] bg-[#100F3E]">
+        <div className="grid-panel p-[28px_20px] bg-[#100F3E]">
           <SectionLabel text="Dark Cards" dark />
-          <div className="grid grid-cols-1 min-[900px]:grid-cols-2 gap-[16px]">
+          <div className="grid grid-cols-1 gap-[16px]">
             {/* Dark Card 1 */}
             <div className="bg-white/5 border border-white/10 rounded-[16px] overflow-hidden transition-all duration-200 hover:-translate-y-[4px] hover:shadow-[0_12px_32px_rgba(0,0,0,0.2)] flex flex-col">
               <div className="p-[20px] flex-1">
                 <div className="inline-block px-[8px] py-[3px] bg-[#FFC800]/15 text-[#FFC800] text-[11px] font-[800] uppercase rounded-[6px] mb-[12px]">Super</div>
                 <h4 className="text-[16px] font-bold text-white mb-[8px]">Unlimited Hearts</h4>
-                <p className="text-[13px] text-white/50 leading-[1.5]">Keep learning without interruption with Super Duolingo benefits.</p>
+                <p className="text-[13px] text-white/50 leading-[1.5]">Keep learning without interruption with Zen Premium benefits.</p>
               </div>
               <div className="border-t border-white/10 px-[20px] py-[16px] flex items-center justify-between">
                 <span className="text-[12px] font-bold uppercase text-white/30">Premium</span>
@@ -189,7 +186,7 @@ const HomePage = () => {
         </div>
 
         {/* Panel 7: Components */}
-        <div className="grid-panel p-[28px_20px] min-[600px]:p-[36px_40px]" id="components">
+        <div className="grid-panel p-[28px_20px]" id="components">
           <SectionLabel text="Components" />
           <div className="flex flex-col gap-[28px]">
 
@@ -208,20 +205,20 @@ const HomePage = () => {
             {/* Input + Button */}
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#AFAFAF] mb-[12px]">Form Elements</div>
-              <div className="flex flex-col min-[600px]:flex-row gap-[12px]">
+              <div className="flex flex-col gap-[12px]">
                 <input
                   type="text"
                   placeholder="Enter your email"
-                  className="flex-1 h-[48px] px-[16px] border-2 border-[#E5E5E5] rounded-[12px] text-[15px] font-[600] text-[#4B4B4B] placeholder:text-[#AFAFAF] placeholder:font-[500] focus:border-[#1CB0F6] focus:outline-none transition-colors"
+                  className="w-full h-[48px] px-[16px] border-2 border-[#E5E5E5] rounded-[12px] text-[15px] font-[600] text-[#4B4B4B] placeholder:text-[#AFAFAF] placeholder:font-[500] focus:border-[#1CB0F6] focus:outline-none transition-colors"
                 />
-                <DuoButton variant="primary" className="min-[600px]:w-[140px]">Subscribe</DuoButton>
+                <DuoButton variant="primary">Subscribe</DuoButton>
               </div>
             </div>
 
             {/* Toggles */}
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#AFAFAF] mb-[12px]">Toggles</div>
-              <div className="flex gap-[24px]">
+              <div className="flex flex-col gap-[16px]">
                 <Toggle checked={toggles.sound} onChange={() => setToggles(p => ({ ...p, sound: !p.sound }))} label="Sound effects" />
                 <Toggle checked={toggles.anim} onChange={() => setToggles(p => ({ ...p, anim: !p.anim }))} label="Animations" />
               </div>
@@ -230,7 +227,7 @@ const HomePage = () => {
             {/* Progress */}
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[1px] text-[#AFAFAF] mb-[12px]">Progress Bars</div>
-              <div className="flex flex-col gap-[10px]">
+              <div className="flex flex-col gap-[16px]">
                 <ProgressBar progress={85} colorClass="bg-[#58CC02]" />
                 <ProgressBar progress={60} colorClass="bg-[#1CB0F6]" />
                 <ProgressBar progress={35} colorClass="bg-[#FF9600]" />
@@ -267,7 +264,7 @@ const HomePage = () => {
         </div>
 
         {/* Panel 8: Dark Components */}
-        <div className="grid-panel p-[28px_20px] min-[600px]:p-[36px_40px] bg-[#100F3E]">
+        <div className="grid-panel p-[28px_20px] bg-[#100F3E]">
           <SectionLabel text="Dark Components" dark />
           <div className="flex flex-col gap-[28px]">
 
@@ -309,14 +306,14 @@ const HomePage = () => {
                     +5
                   </div>
                 </div>
-                <span className="ml-[12px] text-[13px] font-[600] text-white/50">8 learners active</span>
+                <span className="ml-[12px] text-[13px] font-[600] text-white/50">8 learners</span>
               </div>
             </div>
 
             {/* Progress Dark */}
             <div>
               <div className="text-[10px] font-bold uppercase tracking-[1px] text-white/30 mb-[12px]">Stats Progress</div>
-              <div className="flex flex-col gap-[10px]">
+              <div className="flex flex-col gap-[16px]">
                 <ProgressBar progress={72} colorClass="bg-[#FFC800]" dark />
                 <ProgressBar progress={45} colorClass="bg-[#58CC02]" dark />
               </div>

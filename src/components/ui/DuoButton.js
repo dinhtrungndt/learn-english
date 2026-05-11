@@ -1,7 +1,7 @@
 import React from 'react';
 
 const DuoButton = ({ children, variant = 'primary', size = 'normal', disabled, className = '', ...props }) => {
-  const baseClasses = "uppercase font-bold flex items-center justify-center transition-all duration-150 active:translate-y-[4px] active:shadow-none cursor-pointer w-full min-[600px]:w-auto";
+  const baseClasses = "uppercase font-bold flex items-center justify-center transition-all duration-150 active:translate-y-[4px] active:shadow-none cursor-pointer w-full";
   const sizeClasses = size === 'small' ? "h-[36px] px-[16px] text-[13px] rounded-[10px]" : "h-[48px] px-[24px] text-[15px] rounded-[12px]";
 
   let variantClasses = "";
