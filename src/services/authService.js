@@ -1,6 +1,7 @@
 import { AUTH_CONFIG } from '../config';
 import apiClient, { decryptData, encryptData } from './apiClient';
 import CryptoJS from 'crypto-js';
+import { addQuestProgress } from './questService';
 
 // Đăng ký tài khoản
 export const register = async (userData) => {
@@ -126,10 +127,33 @@ export const recordStudySession = async () => {
       const updatedUser = { ...currentUser, ...response.data };
       const encryptedUser = encryptData(updatedUser);
       localStorage.setItem(AUTH_CONFIG.USER_KEY, encryptedUser);
+      
+      // Cập nhật Quest
+      addQuestProgress('sessions', 1);
+      addQuestProgress('xp', 10);
     }
     return response.data;
   } catch (error) {
     console.error("Lỗi ghi nhận phiên học:", error);
+    return null;
+  }
+};
+
+// Cộng thêm XP (từ Quests)
+export const addCustomXP = async (amount) => {
+  try {
+    const response = await apiClient.post(`/auth/me/add-xp?amount=${amount}`);
+    const currentUser = getCurrentUser();
+    if (response.data) {
+      const updatedUser = { ...currentUser, ...response.data };
+      const encryptedUser = encryptData(updatedUser);
+      localStorage.setItem(AUTH_CONFIG.USER_KEY, encryptedUser);
+      
+      addQuestProgress('xp', amount);
+    }
+    return response.data;
+  } catch (error) {
+    console.error("Lỗi cộng XP:", error);
     return null;
   }
 };

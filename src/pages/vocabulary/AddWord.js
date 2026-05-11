@@ -1,17 +1,26 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DuoButton from '../../components/ui/DuoButton';
 import { addVocabulary } from '../../services/vocabService';
+import { getCategories, createCategory } from '../../services/categoryService';
 
 const AddWordPage = () => {
   const navigate = useNavigate();
   const [word, setWord] = useState('');
   const [meaning, setMeaning] = useState('');
   const [example, setExample] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [categories, setCategories] = useState([]);
+  const [newCatName, setNewCatName] = useState('');
+  const [showNewCat, setShowNewCat] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    getCategories().then(setCategories).catch(() => {});
+  }, []);
 
   const handleAutoFill = async () => {
     if (!word.trim()) {
@@ -82,12 +91,13 @@ const AddWordPage = () => {
     setError('');
     
     try {
-      await addVocabulary({ word, meaning, example });
+      await addVocabulary({ word, meaning, example, category_id: categoryId || null });
       setSuccess(true);
       // Reset form
       setWord('');
       setMeaning('');
       setExample('');
+      setCategoryId('');
       
       // Tự động tắt thông báo thành công sau 2s
       setTimeout(() => setSuccess(false), 2000);
@@ -167,6 +177,55 @@ const AddWordPage = () => {
               value={example}
               onChange={(e) => setExample(e.target.value)}
             />
+          </div>
+
+          {/* Category Selector */}
+          <div className="flex flex-col gap-[8px]">
+            <div className="flex items-center justify-between">
+              <label className="text-[15px] font-[700] text-[#4B4B4B]">Thư mục</label>
+              <button type="button" onClick={() => setShowNewCat(!showNewCat)} className="text-[13px] font-[700] text-[#1CB0F6]">
+                {showNewCat ? 'Hủy' : '+ Tạo mới'}
+              </button>
+            </div>
+
+            {showNewCat ? (
+              <div className="flex gap-[8px]">
+                <input
+                  type="text"
+                  className="flex-1 h-[44px] bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[12px] px-[12px] text-[15px] font-[500] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-all"
+                  placeholder="Tên thư mục..."
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="h-[44px] px-[16px] bg-[#1CB0F6] text-white font-[700] rounded-[12px] text-[14px] hover:bg-[#1CB0F6]/80 transition-colors"
+                  onClick={async () => {
+                    if (!newCatName.trim()) return;
+                    try {
+                      const created = await createCategory(newCatName.trim());
+                      setCategories(prev => [...prev, created]);
+                      setCategoryId(created.id);
+                      setNewCatName('');
+                      setShowNewCat(false);
+                    } catch (e) { console.error(e); }
+                  }}
+                >
+                  Lưu
+                </button>
+              </div>
+            ) : (
+              <select
+                className="h-[48px] bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[16px] px-[16px] text-[16px] font-[500] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-all"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+              >
+                <option value="">📁 Chưa phân loại</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>📂 {cat.name}</option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="mt-auto pt-[24px]">

@@ -1,4 +1,5 @@
 import apiClient from './apiClient';
+import { addQuestProgress } from './questService';
 
 // Lấy danh sách từ vựng cần ôn tập hôm nay
 export const getVocabulariesForReview = async () => {
@@ -24,9 +25,10 @@ export const getAllVocabularies = async (skip = 0, limit = 100) => {
 export const addVocabulary = async (vocabData) => {
   try {
     const response = await apiClient.post('/vocabularies/', vocabData);
+    addQuestProgress('words', 1);
     return response.data;
   } catch (error) {
-    throw error.response?.data || { detail: 'Lỗi thêm từ vựng' };
+    throw error.response?.data || { detail: 'Lỗi khi thêm từ vựng' };
   }
 };
 
