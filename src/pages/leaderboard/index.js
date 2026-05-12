@@ -1,7 +1,236 @@
-import React, { useState, useEffect } from 'react';
-import { getLeaderboard } from '../../services/authService';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { getLeaderboard } from '../../services/authService';
 
+/* ─── Design tokens ─── */
+const S = {
+  blue: '#1CB0F6',
+  blueDark: '#1899D6',
+  blueLight: '#E8F6FD',
+  green: '#58CC02',
+  greenLight: '#EDFBD0',
+  red: '#FF4B4B',
+  purple: '#CE82FF',
+  purpleLight: '#F5EEFF',
+  orange: '#FF9600',
+  yellow: '#FFC800',
+  yellowLight: '#FFF8E0',
+  gray: '#AFAFAF',
+  grayLight: '#F7F7F7',
+  border: '#E8E8E8',
+  text: '#3C3C3C',
+  textMuted: '#8A8A8A',
+  cardRadius: '18px',
+  btnRadius: '14px',
+  gold: '#FFD700',
+  silver: '#C0C0C0',
+  bronze: '#CD7F32',
+};
+
+/* ─── League tiers ─── */
+const getLeagueData = (xp) => {
+  if (xp >= 500) return { name: 'Vàng', icon: '🥇', color: S.gold };
+  if (xp >= 100) return { name: 'Bạc', icon: '🥈', color: S.silver };
+  return { name: 'Đồng', icon: '🥉', color: S.bronze };
+};
+
+/* ─── Avatar colors cycle ─── */
+const avatarColors = [S.purple, S.blue, S.orange, S.green, '#FF6B6B', '#20C997'];
+const getAvatarColor = (id, index) => avatarColors[index % avatarColors.length];
+
+/* ─── Rank badge ─── */
+const RankBadge = ({ index }) => {
+  const medals = ['🥇', '🥈', '🥉'];
+  if (index < 3) {
+    return (
+      <span style={{ fontSize: 24, lineHeight: 1, width: 36, textAlign: 'center', flexShrink: 0 }}>
+        {medals[index]}
+      </span>
+    );
+  }
+  return (
+    <span style={{
+      width: 36, flexShrink: 0,
+      fontSize: 14, fontWeight: 900,
+      color: S.gray, textAlign: 'center',
+    }}>
+      {index + 1}
+    </span>
+  );
+};
+
+/* ─── Podium top-3 ─── */
+const Podium = ({ top3 }) => {
+  if (top3.length < 1) return null;
+
+  const order = [1, 0, 2]; // silver, gold, bronze visual order
+  const heights = [80, 108, 64];
+  const sizes = [52, 64, 48];
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+      gap: 12,
+      padding: '24px 20px 0',
+    }}>
+      {order.map((rankIdx) => {
+        const player = top3[rankIdx];
+        if (!player) return <div key={rankIdx} style={{ flex: 1 }} />;
+        const league = getLeagueData(player.xp);
+        const avatarColor = getAvatarColor(player.id, rankIdx);
+        const firstLetter = player.name ? player.name.charAt(0).toUpperCase() : 'U';
+        const podiumH = heights[rankIdx];
+        const avatarSize = sizes[rankIdx];
+        const isFirst = rankIdx === 0;
+
+        return (
+          <div key={player.id} style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 6,
+          }}>
+            {/* Crown for #1 */}
+            {isFirst && (
+              <span style={{ fontSize: 20, marginBottom: -4 }}>👑</span>
+            )}
+
+            {/* Avatar */}
+            <div style={{
+              width: avatarSize, height: avatarSize,
+              borderRadius: '50%',
+              background: avatarColor,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: isFirst ? 26 : 20,
+              fontWeight: 900, color: '#fff',
+              border: `3px solid #fff`,
+              boxShadow: isFirst ? `0 0 0 3px ${S.gold}` : 'none',
+            }}>
+              {firstLetter}
+            </div>
+
+            {/* Name */}
+            <span style={{
+              fontSize: isFirst ? 13 : 11,
+              fontWeight: 800,
+              color: S.text,
+              textAlign: 'center',
+              maxWidth: 80,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}>
+              {player.name}
+            </span>
+
+            {/* XP */}
+            <span style={{
+              fontSize: 12, fontWeight: 900,
+              color: S.yellow,
+              background: S.yellowLight,
+              padding: '2px 8px', borderRadius: 6,
+            }}>
+              {player.xp || 0} XP
+            </span>
+
+            {/* Podium block */}
+            <div style={{
+              width: '100%',
+              height: podiumH,
+              borderRadius: '10px 10px 0 0',
+              background: isFirst
+                ? `linear-gradient(180deg, #FFE566 0%, #FFC800 100%)`
+                : rankIdx === 1
+                  ? `linear-gradient(180deg, #E0E0E0 0%, #B0B0B0 100%)`
+                  : `linear-gradient(180deg, #E8A87C 0%, #CD7F32 100%)`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 22,
+            }}>
+              {['🥇', '🥈', '🥉'][rankIdx]}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/* ─── Player row ─── */
+const PlayerRow = ({ player, index, isMe }) => {
+  const league = getLeagueData(player.xp || 0);
+  const avatarColor = getAvatarColor(player.id, index);
+  const firstLetter = player.name ? player.name.charAt(0).toUpperCase() : 'U';
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      padding: '12px 16px',
+      borderRadius: S.cardRadius,
+      border: `2px solid ${isMe ? S.blue : S.border}`,
+      background: isMe ? S.blueLight : '#fff',
+      transition: 'all .15s',
+    }}>
+      <RankBadge index={index} />
+
+      {/* Avatar */}
+      <div style={{
+        width: 44, height: 44,
+        borderRadius: '50%',
+        background: avatarColor,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 18, fontWeight: 900, color: '#fff',
+        flexShrink: 0,
+      }}>
+        {firstLetter}
+      </div>
+
+      {/* Info */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+          <span style={{
+            fontSize: 15, fontWeight: 900,
+            color: isMe ? S.blue : S.text,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {player.name}
+          </span>
+          {isMe && (
+            <span style={{
+              fontSize: 10, fontWeight: 800, color: '#fff',
+              background: S.blue, padding: '2px 6px',
+              borderRadius: 4, letterSpacing: '0.5px',
+              flexShrink: 0,
+            }}>BẠN</span>
+          )}
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 600, color: S.gray }}>
+          {league.icon} Giải {league.name}
+        </span>
+      </div>
+
+      {/* XP */}
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flexShrink: 0,
+      }}>
+        <span style={{
+          fontSize: 16, fontWeight: 900, color: S.yellow,
+        }}>
+          {(player.xp || 0).toLocaleString()}
+        </span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: S.gray }}>XP</span>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Main page ─── */
 const LeaderboardPage = () => {
   const { user } = useAuth();
   const [leaderboard, setLeaderboard] = useState([]);
@@ -14,7 +243,7 @@ const LeaderboardPage = () => {
         const data = await getLeaderboard();
         setLeaderboard(data);
       } catch (err) {
-        console.error("Lỗi tải bảng xếp hạng:", err);
+        console.error('Lỗi tải bảng xếp hạng:', err);
       } finally {
         setLoading(false);
       }
@@ -22,93 +251,112 @@ const LeaderboardPage = () => {
     fetchLeaderboard();
   }, []);
 
-  const getRankStyle = (index) => {
-    switch (index) {
-      case 0: return { color: '#FFD700', bg: 'bg-[#FFD700]/10' }; // Gold
-      case 1: return { color: '#C0C0C0', bg: 'bg-[#C0C0C0]/10' }; // Silver
-      case 2: return { color: '#CD7F32', bg: 'bg-[#CD7F32]/10' }; // Bronze
-      default: return { color: '#AFAFAF', bg: 'bg-transparent' };
-    }
-  };
+  const top3 = leaderboard.slice(0, 3);
+  const rest = leaderboard.slice(3);
 
-  const getLeagueData = (xp) => {
-    if (xp >= 500) return { name: "Giải Vàng", icon: "🥇" };
-    if (xp >= 100) return { name: "Giải Bạc", icon: "🥈" };
-    return { name: "Giải Đồng", icon: "🥉" };
-  };
+  /* Find current user rank */
+  const myRank = leaderboard.findIndex(p => p.id === user?.id);
 
   return (
-    <div className="w-full flex flex-col min-h-full pb-[40px] bg-[#F7F7F7]">
-      
-      {/* Header */}
-      <div className="flex flex-col items-center justify-center px-[16px] py-[24px] bg-white border-b-2 border-[#E5E5E5] sticky top-0 z-10">
-        <div className="text-[40px] mb-[8px]">🛡️</div>
-        <h1 className="text-[20px] font-bold text-[#4B4B4B]">Bảng Xếp Hạng</h1>
-        <p className="text-[14px] font-[500] text-[#AFAFAF]">Cạnh tranh điểm XP với mọi người</p>
-      </div>
+    <>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
 
-      {/* Leaderboard List */}
-      <div className="flex-1 flex flex-col px-[16px] pt-[24px] gap-[12px]">
+      <div style={{
+        width: '100%',
+        minHeight: '100%',
+        background: S.grayLight,
+        paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px) + 20px)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+
+        {/* ── Header ── */}
+        <div style={{
+          background: '#fff',
+          borderBottom: `2px solid ${S.border}`,
+          padding: '20px 20px 0',
+          position: 'sticky', top: 0, zIndex: 10,
+        }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingBottom: 16 }}>
+            <div style={{ fontSize: 36, marginBottom: 6 }}>🏆</div>
+            <h1 style={{ fontSize: 22, fontWeight: 900, color: S.text, marginBottom: 2 }}>
+              Bảng Xếp Hạng
+            </h1>
+            <p style={{ fontSize: 13, fontWeight: 600, color: S.gray }}>
+              Cạnh tranh điểm XP với mọi người
+            </p>
+
+            {/* My rank strip */}
+            {!loading && myRank >= 0 && (
+              <div style={{
+                marginTop: 12,
+                padding: '6px 16px',
+                background: S.blueLight,
+                borderRadius: 99,
+                fontSize: 13,
+                fontWeight: 800,
+                color: S.blue,
+              }}>
+                Xếp hạng của bạn: #{myRank + 1}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Body ── */}
         {loading ? (
-          <div className="flex justify-center py-[40px]">
-            <div className="animate-spin w-8 h-8 border-4 border-[#1CB0F6] border-t-transparent rounded-full"></div>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '60px 0' }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: '50%',
+              border: `4px solid ${S.blue}`, borderTopColor: 'transparent',
+              animation: 'spin 1s linear infinite',
+            }} />
           </div>
         ) : leaderboard.length === 0 ? (
-          <div className="bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[24px] text-center flex flex-col items-center">
-            <span className="text-[40px] mb-[12px]">😴</span>
-            <p className="text-[15px] font-[600] text-[#777777] mb-[8px]">Chưa có ai học cả</p>
-            <p className="text-[13px] text-[#AFAFAF] font-[500]">Hãy là người đầu tiên ghi điểm XP!</p>
+          <div style={{
+            margin: '24px 20px',
+            background: '#fff', border: `2px solid ${S.border}`,
+            borderRadius: S.cardRadius, padding: 32,
+            textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center',
+          }}>
+            <span style={{ fontSize: 44, marginBottom: 12 }}>😴</span>
+            <p style={{ fontSize: 15, fontWeight: 700, color: S.textMuted, marginBottom: 6 }}>Chưa có ai học cả</p>
+            <p style={{ fontSize: 13, color: S.gray, fontWeight: 600 }}>Hãy là người đầu tiên ghi điểm XP!</p>
           </div>
         ) : (
-          leaderboard.map((player, index) => {
-            const isMe = player.id === user?.id;
-            const style = getRankStyle(index);
-            const firstLetter = player.name ? player.name.charAt(0).toUpperCase() : 'U';
-            
-            return (
-              <div 
-                key={player.id} 
-                className={`flex items-center gap-[12px] p-[16px] rounded-[16px] border-2 transition-all ${isMe ? 'border-[#1CB0F6] bg-[#1CB0F6]/5' : 'border-[#E5E5E5] bg-white'}`}
-              >
-                {/* Rank Number */}
-                <div 
-                  className={`w-[32px] h-[32px] rounded-full flex items-center justify-center font-bold text-[15px] ${style.bg}`}
-                  style={{ color: style.color !== '#AFAFAF' ? style.color : '#777' }}
-                >
-                  {index + 1}
-                </div>
+          <>
+            {/* Podium */}
+            <div style={{ background: '#fff', borderBottom: `2px solid ${S.border}` }}>
+              <Podium top3={top3} />
+            </div>
 
-                {/* Avatar */}
-                <div className="w-[48px] h-[48px] rounded-full bg-[#CE82FF] flex items-center justify-center text-white text-[20px] font-bold shrink-0">
-                  {firstLetter}
+            {/* Rest of list */}
+            {rest.length > 0 && (
+              <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: S.gray, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 2 }}>
+                  Những người khác
                 </div>
-
-                {/* Info */}
-                <div className="flex-1 flex flex-col">
-                  <div className="flex items-center gap-[6px]">
-                    <span className={`text-[16px] font-bold ${isMe ? 'text-[#1CB0F6]' : 'text-[#4B4B4B]'}`}>
-                      {player.name}
-                    </span>
-                    {isMe && (
-                      <span className="text-[10px] font-bold text-white bg-[#1CB0F6] px-[6px] py-[2px] rounded-[4px] uppercase tracking-wide">
-                        Bạn
-                      </span>
-                    )}
+                {rest.map((player, i) => (
+                  <div key={player.id} style={{ animation: `fadeInUp .3s ease ${i * 0.04}s both` }}>
+                    <PlayerRow
+                      player={player}
+                      index={i + 3}
+                      isMe={player.id === user?.id}
+                    />
                   </div>
-                  <span className="text-[13px] font-[500] text-[#AFAFAF]">@{player.username}</span>
-                </div>
-
-                {/* XP */}
-                <div className="flex flex-col items-end">
-                  <span className="text-[16px] font-bold text-[#FFC800]">{player.xp || 0} XP</span>
-                  <span className="text-[12px] font-[600] text-[#AFAFAF]">{getLeagueData(player.xp).name}</span>
-                </div>
+                ))}
               </div>
-            );
-          })
+            )}
+          </>
         )}
       </div>
-    </div>
+    </>
   );
 };
 

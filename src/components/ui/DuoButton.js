@@ -1,4 +1,3 @@
-import React from 'react';
 
 const DuoButton = ({ children, variant = 'primary', size = 'normal', disabled, className = '', ...props }) => {
   const baseClasses = "uppercase font-bold flex items-center justify-center transition-all duration-150 active:translate-y-[4px] active:shadow-none cursor-pointer w-full";
