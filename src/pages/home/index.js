@@ -122,7 +122,7 @@ const HomePage = () => {
 
           <div
             className="min-w-[280px] flex-shrink-0 snap-center bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex flex-col gap-[8px] cursor-pointer hover:border-[#1CB0F6] transition-colors shadow-sm"
-            onClick={() => navigate('/practice')}
+            onClick={() => navigate(`/practice${activeCategory !== 'all' ? `?category=${activeCategory}` : ''}`)}
           >
             <div className="flex items-center justify-between mb-[4px]">
               <div className="w-[40px] h-[40px] bg-[#1CB0F6]/10 text-[#1CB0F6] rounded-full flex items-center justify-center text-[20px]">
@@ -145,6 +145,20 @@ const HomePage = () => {
             </div>
             <h3 className="text-[16px] font-bold text-[#4B4B4B]">Thêm từ mới</h3>
             <p className="text-[13px] text-[#AFAFAF] font-[500]">Lưu lại từ vựng bạn vừa gặp trên YouTube.</p>
+          </div>
+
+          <div
+            className="min-w-[280px] flex-shrink-0 snap-center bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex flex-col gap-[8px] cursor-pointer hover:border-[#CE82FF] transition-colors shadow-sm"
+            onClick={() => navigate(`/test${activeCategory !== 'all' ? `?category=${activeCategory}` : ''}`)}
+          >
+            <div className="flex items-center justify-between mb-[4px]">
+              <div className="w-[40px] h-[40px] bg-[#CE82FF]/10 text-[#CE82FF] rounded-full flex items-center justify-center text-[20px]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+              </div>
+              <span className="bg-[#CE82FF] text-white text-[12px] font-[800] uppercase px-[8px] py-[2px] rounded-[6px]">Kiểm tra</span>
+            </div>
+            <h3 className="text-[16px] font-bold text-[#4B4B4B]">Làm bài kiểm tra</h3>
+            <p className="text-[13px] text-[#AFAFAF] font-[500]">Đánh giá năng lực ghi nhớ từ vựng hiện tại của bạn.</p>
           </div>
 
         </div>
@@ -193,7 +207,7 @@ const HomePage = () => {
           {activeCategory === 'all'
             ? `Từ vựng của bạn (${vocabularies.length})`
             : `${categories.find(c => c.id === activeCategory)?.name || 'Thư mục'} (${
-                vocabularies.filter(v => v.category_id === activeCategory).length
+                vocabularies.filter(v => v.category_id?.toLowerCase() === activeCategory?.toLowerCase()).length
               })`
           }
         </h2>
@@ -212,7 +226,7 @@ const HomePage = () => {
           <div className="flex flex-col gap-[12px]">
             {(activeCategory === 'all' 
               ? vocabularies 
-              : vocabularies.filter(v => v.category_id === activeCategory)
+              : vocabularies.filter(v => v.category_id?.toLowerCase() === activeCategory?.toLowerCase())
             ).map((vocab) => (
               <div key={vocab.id} className="bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex flex-col hover:border-[#1CB0F6] transition-colors cursor-pointer group">
                 <div className="flex justify-between items-start mb-[8px]">

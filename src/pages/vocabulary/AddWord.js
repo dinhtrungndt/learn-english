@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DuoButton from '../../components/ui/DuoButton';
+import { createCategory, getCategories } from '../../services/categoryService';
 import { addVocabulary } from '../../services/vocabService';
-import { getCategories, createCategory } from '../../services/categoryService';
 
 const AddWordPage = () => {
   const navigate = useNavigate();
@@ -19,7 +19,7 @@ const AddWordPage = () => {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    getCategories().then(setCategories).catch(() => {});
+    getCategories().then(setCategories).catch(() => { });
   }, []);
 
   const handleAutoFill = async () => {
@@ -30,10 +30,10 @@ const AddWordPage = () => {
 
     setIsAutoFilling(true);
     setError('');
-    
+
     try {
       const targetWord = word.trim().toLowerCase();
-      
+
       // 1. Fetch Vietnamese Meaning (MyMemory)
       let translatedMeaning = '';
       try {
@@ -89,7 +89,7 @@ const AddWordPage = () => {
 
     setLoading(true);
     setError('');
-    
+
     try {
       await addVocabulary({ word, meaning, example, category_id: categoryId || null });
       setSuccess(true);
@@ -98,7 +98,7 @@ const AddWordPage = () => {
       setMeaning('');
       setExample('');
       setCategoryId('');
-      
+
       // Tự động tắt thông báo thành công sau 2s
       setTimeout(() => setSuccess(false), 2000);
     } catch (err) {
@@ -135,8 +135,8 @@ const AddWordPage = () => {
           <div className="flex flex-col gap-[8px]">
             <div className="flex items-center justify-between">
               <label className="text-[15px] font-[700] text-[#4B4B4B]">Từ tiếng Anh <span className="text-[#FF4B4B]">*</span></label>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={handleAutoFill}
                 disabled={isAutoFilling || !word.trim()}
                 className="flex items-center gap-[6px] text-[13px] font-[700] text-[#CE82FF] bg-[#CE82FF]/10 px-[10px] py-[4px] rounded-[8px] hover:bg-[#CE82FF]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -149,8 +149,8 @@ const AddWordPage = () => {
                 Tự động tra
               </button>
             </div>
-            <input 
-              type="text" 
+            <input
+              type="text"
               className="h-[48px] bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[16px] px-[16px] text-[16px] font-[500] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-all"
               placeholder="Ví dụ: extraordinary"
               value={word}
@@ -160,8 +160,8 @@ const AddWordPage = () => {
 
           <div className="flex flex-col gap-[8px]">
             <label className="text-[15px] font-[700] text-[#4B4B4B]">Nghĩa tiếng Việt <span className="text-[#FF4B4B]">*</span></label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               className="h-[48px] bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[16px] px-[16px] text-[16px] font-[500] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-all"
               placeholder="Ví dụ: phi thường, đặc biệt"
               value={meaning}
@@ -171,7 +171,7 @@ const AddWordPage = () => {
 
           <div className="flex flex-col gap-[8px]">
             <label className="text-[15px] font-[700] text-[#4B4B4B]">Câu ví dụ (Tùy chọn)</label>
-            <textarea 
+            <textarea
               className="h-[100px] bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[16px] p-[16px] text-[16px] font-[500] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-all resize-none"
               placeholder="Ví dụ: She is an extraordinary artist."
               value={example}
@@ -229,9 +229,9 @@ const AddWordPage = () => {
           </div>
 
           <div className="mt-auto pt-[24px]">
-            <DuoButton 
-              type="submit" 
-              className="w-full" 
+            <DuoButton
+              type="submit"
+              className="w-full"
               disabled={loading}
             >
               {loading ? 'Đang lưu...' : 'Lưu từ vựng'}

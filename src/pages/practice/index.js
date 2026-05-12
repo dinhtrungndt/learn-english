@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import DuoButton from '../../components/ui/DuoButton';
 import { getVocabulariesForReview, getAllVocabularies, reviewVocabulary } from '../../services/vocabService';
 import { recordStudySession } from '../../services/authService';
@@ -7,6 +7,9 @@ import { playAudio } from '../../utils/speech';
 
 const PracticePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const categoryId = queryParams.get('category');
   
   // Data
   const [vocabList, setVocabList] = useState([]); // Danh sách từ cần ôn ban đầu
@@ -37,10 +40,17 @@ const PracticePage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [reviewData, allData] = await Promise.all([
+      let [reviewData, allData] = await Promise.all([
         getVocabulariesForReview(),
         getAllVocabularies()
       ]);
+      
+      if (categoryId) {
+        reviewData = reviewData.filter(v => v.category_id?.toLowerCase() === categoryId.toLowerCase());
+        // allData = allData.filter(v => v.category_id?.toLowerCase() === categoryId.toLowerCase());
+        // keep allData as is so we have enough distractors
+      }
+
       setVocabList(reviewData);
       setAllVocabs(allData);
       
@@ -237,7 +247,9 @@ const PracticePage = () => {
           <div className="w-[120px] h-[120px] bg-[#F7F7F7] rounded-full flex items-center justify-center text-[48px] border-4 border-[#E5E5E5] mb-[24px]">🌱</div>
           <h2 className="text-[20px] font-bold text-[#4B4B4B] mb-[8px]">Chưa có từ nào cần ôn</h2>
           <p className="text-[15px] text-[#AFAFAF] mb-[32px] font-[500]">
-            Bạn đã ôn hết từ vựng của hôm nay rồi. Hãy quay lại xem YouTube và thêm từ mới nhé!
+            {categoryId 
+              ? "Thư mục này hiện chưa có từ vựng nào đến hạn ôn tập." 
+              : "Bạn đã ôn hết từ vựng của hôm nay rồi. Hãy quay lại xem YouTube và thêm từ mới nhé!"}
           </p>
           <DuoButton onClick={() => navigate('/add-word')} className="w-full mb-[16px]">
             Thêm từ mới ngay

@@ -11,6 +11,7 @@ import PracticePage from '../pages/practice';
 import LeaderboardPage from '../pages/leaderboard';
 import QuestsPage from '../pages/quests';
 import AddWordPage from '../pages/vocabulary/AddWord';
+import TestPage from '../pages/test';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }) => {
@@ -120,6 +121,16 @@ export const Routers = () => {
             <ProtectedRoute>
               <MainLayout>
                 <AddWordPage />
+              </MainLayout>
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/test" 
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <TestPage />
               </MainLayout>
             </ProtectedRoute>
           } 
