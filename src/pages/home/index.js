@@ -1,10 +1,457 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAllVocabularies, deleteVocabulary, updateVocabulary } from '../../services/vocabService';
-import { getCategories, createCategory, deleteCategory } from '../../services/categoryService';
+import { createCategory, deleteCategory, getCategories } from '../../services/categoryService';
+import { deleteVocabulary, getAllVocabularies, updateVocabulary } from '../../services/vocabService';
 import { playAudio } from '../../utils/speech';
-import DuoButton from '../../components/ui/DuoButton';
 
+/* ─────────────────────────────────────────
+   DESIGN TOKENS
+───────────────────────────────────────── */
+const S = {
+  blue: '#1CB0F6',
+  blueDark: '#1899D6',
+  blueLight: '#E8F6FD',
+  green: '#58CC02',
+  greenDark: '#46A302',
+  greenLight: '#EDFBD0',
+  red: '#FF4B4B',
+  redDark: '#EA2B2B',
+  redLight: '#FFF0F0',
+  purple: '#CE82FF',
+  purpleLight: '#F5EEFF',
+  orange: '#FF9600',
+  gray: '#AFAFAF',
+  grayLight: '#F7F7F7',
+  border: '#E8E8E8',
+  text: '#3C3C3C',
+  textMuted: '#8A8A8A',
+  cardRadius: '18px',
+  btnRadius: '14px',
+  /* Footer height + safe area */
+  footerH: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+};
+
+/* ─────────────────────────────────────────
+   SHARED SMALL COMPONENTS
+───────────────────────────────────────── */
+
+const PressButton = ({ children, onClick, variant = 'primary', fullWidth, disabled, style, type = 'button' }) => {
+  const variants = {
+    primary: { bg: S.green, shadow: S.greenDark, color: '#fff', border: 'none' },
+    danger: { bg: S.red, shadow: S.redDark, color: '#fff', border: 'none' },
+    ghost: { bg: '#fff', shadow: S.border, color: S.text, border: `2px solid ${S.border}` },
+    blue: { bg: S.blue, shadow: S.blueDark, color: '#fff', border: 'none' },
+  };
+  const v = variants[variant];
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        height: 52, borderRadius: S.btnRadius,
+        background: v.bg, color: v.color,
+        border: v.border, boxShadow: `0 4px 0 ${v.shadow}`,
+        fontFamily: 'inherit', fontSize: 15, fontWeight: 800,
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.5 : 1,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        width: fullWidth ? '100%' : undefined,
+        transition: 'all .1s',
+        letterSpacing: '0.2px',
+        ...style,
+      }}
+      onMouseDown={e => { if (!disabled) e.currentTarget.style.cssText += ';box-shadow:none;transform:translateY(4px)'; }}
+      onMouseUp={e => { e.currentTarget.style.cssText = e.currentTarget.style.cssText.replace(';box-shadow:none;transform:translateY(4px)', ''); }}
+    >
+      {children}
+    </button>
+  );
+};
+
+const SpeakerBtn = ({ word, onClick }) => (
+  <button
+    onClick={e => { e.stopPropagation(); onClick ? onClick() : playAudio(word); }}
+    style={{
+      width: 30, height: 30, borderRadius: 8,
+      background: S.blueLight, border: 'none',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      cursor: 'pointer', flexShrink: 0,
+    }}
+  >
+    <svg width="14" height="14" viewBox="0 0 24 24" fill={S.blue} stroke={S.blue} strokeWidth="1.5">
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" strokeLinecap="round" />
+    </svg>
+  </button>
+);
+
+const IconBtn = ({ type, onClick }) => {
+  const isEdit = type === 'edit';
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: 30, height: 30, borderRadius: 8,
+        background: S.grayLight, border: 'none',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer', color: S.gray,
+        transition: 'all .15s',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.color = isEdit ? S.blue : S.red;
+        e.currentTarget.style.background = isEdit ? S.blueLight : S.redLight;
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.color = S.gray;
+        e.currentTarget.style.background = S.grayLight;
+      }}
+    >
+      {isEdit ? (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+        </svg>
+      ) : (
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        </svg>
+      )}
+    </button>
+  );
+};
+
+const CloseBtn = ({ onClick }) => (
+  <button
+    onClick={onClick}
+    style={{
+      width: 32, height: 32, borderRadius: '50%',
+      background: S.grayLight, border: 'none',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      cursor: 'pointer', color: S.textMuted, flexShrink: 0,
+    }}
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  </button>
+);
+
+const Field = ({ label, required, children }) => (
+  <div>
+    <label style={{ display: 'block', fontSize: 12, fontWeight: 800, color: S.textMuted, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 8 }}>
+      {label} {required && <span style={{ color: S.red }}>*</span>}
+    </label>
+    {children}
+  </div>
+);
+
+const inputStyle = {
+  width: '100%', height: 52,
+  background: S.grayLight, border: `2px solid ${S.border}`,
+  borderRadius: S.btnRadius, padding: '0 16px',
+  fontFamily: 'inherit', fontSize: 16, fontWeight: 700,
+  color: S.text, outline: 'none', transition: 'all .2s',
+  boxSizing: 'border-box',
+};
+
+/* ─────────────────────────────────────────
+   MODAL OVERLAY WRAPPER
+───────────────────────────────────────── */
+const Overlay = ({ onClose, children }) => (
+  <div
+    onClick={onClose}
+    style={{
+      position: 'fixed', inset: 0,
+      background: 'rgba(0,0,0,.5)',
+      zIndex: 200,
+      display: 'flex',
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+    }}
+  >
+    <div
+      onClick={e => e.stopPropagation()}
+      style={{
+        background: '#fff',
+        borderRadius: '24px 24px 0 0',
+        width: '100%',
+        maxWidth: 480,
+        padding: '8px 0 0',
+        /* Account for phone safe area at bottom */
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        maxHeight: '92vh',
+        display: 'flex',
+        flexDirection: 'column',
+        animation: 'slideUp .25s ease',
+      }}
+    >
+      <div style={{ width: 40, height: 4, borderRadius: 99, background: S.border, margin: '8px auto 16px' }} />
+      {children}
+    </div>
+  </div>
+);
+
+/* ─────────────────────────────────────────
+   EDIT MODAL
+───────────────────────────────────────── */
+const EditModal = ({ vocab, onClose, onSave }) => {
+  const [form, setForm] = useState({ word: vocab.word, meaning: vocab.meaning, example: vocab.example || '' });
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.word.trim() || !form.meaning.trim()) return;
+    setSaving(true);
+    await onSave(form);
+    setSaving(false);
+  };
+
+  const focused = (e) => { e.target.style.borderColor = S.blue; e.target.style.background = '#fff'; };
+  const blurred = (e) => { e.target.style.borderColor = S.border; e.target.style.background = S.grayLight; };
+
+  return (
+    <Overlay onClose={onClose}>
+      <div style={{ padding: '0 20px', overflowY: 'auto', flex: 1 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 900, color: S.text }}>✏️ Sửa từ vựng</h2>
+          <CloseBtn onClick={onClose} />
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 32 }}>
+          <Field label="Từ tiếng Anh" required>
+            <input type="text" required value={form.word}
+              onChange={e => setForm({ ...form, word: e.target.value })}
+              onFocus={focused} onBlur={blurred}
+              placeholder="Ví dụ: resilient" style={inputStyle} />
+          </Field>
+
+          <Field label="Nghĩa tiếng Việt" required>
+            <input type="text" required value={form.meaning}
+              onChange={e => setForm({ ...form, meaning: e.target.value })}
+              onFocus={focused} onBlur={blurred}
+              placeholder="Ví dụ: kiên cường" style={inputStyle} />
+          </Field>
+
+          <Field label="Câu ví dụ (không bắt buộc)">
+            <textarea rows={3} value={form.example}
+              onChange={e => setForm({ ...form, example: e.target.value })}
+              onFocus={focused} onBlur={blurred}
+              placeholder="Ví dụ: She is resilient in difficult times."
+              style={{ ...inputStyle, height: 'auto', padding: '14px 16px', resize: 'none', lineHeight: 1.5 }} />
+          </Field>
+
+          <PressButton type="submit" variant="primary" fullWidth disabled={saving}>
+            {saving ? '⏳ Đang lưu...' : '✅ Lưu thay đổi'}
+          </PressButton>
+        </form>
+      </div>
+    </Overlay>
+  );
+};
+
+/* ─────────────────────────────────────────
+   DELETE CONFIRM MODAL
+───────────────────────────────────────── */
+const DeleteModal = ({ vocab, onClose, onConfirm, isDeleting }) => (
+  <Overlay onClose={onClose}>
+    <div style={{ padding: '0 20px 32px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+      <div style={{
+        width: 64, height: 64, borderRadius: '50%',
+        background: S.redLight, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 28, marginBottom: 16,
+      }}>🗑️</div>
+      <h2 style={{ fontSize: 20, fontWeight: 900, color: S.text, marginBottom: 8 }}>Xóa từ này?</h2>
+      <p style={{ fontSize: 15, color: S.textMuted, fontWeight: 600, lineHeight: 1.6, marginBottom: 28 }}>
+        Bạn đang xóa từ{' '}
+        <strong style={{ color: S.text }}>"{vocab.word}"</strong>.{' '}
+        Tiến trình học của từ này sẽ mất vĩnh viễn.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+        <PressButton variant="danger" fullWidth onClick={onConfirm} disabled={isDeleting}>
+          {isDeleting ? '⏳ Đang xóa...' : '🗑️ Xóa luôn'}
+        </PressButton>
+        <PressButton variant="ghost" fullWidth onClick={onClose} disabled={isDeleting}>
+          Giữ lại
+        </PressButton>
+      </div>
+    </div>
+  </Overlay>
+);
+
+/* ─────────────────────────────────────────
+   MANAGE CATEGORIES MODAL
+───────────────────────────────────────── */
+const CategoriesModal = ({ categories, onClose, onAdd, onDelete }) => {
+  const [name, setName] = useState('');
+  const [adding, setAdding] = useState(false);
+
+  const handleAdd = async () => {
+    if (!name.trim()) return;
+    setAdding(true);
+    await onAdd(name.trim());
+    setName('');
+    setAdding(false);
+  };
+
+  return (
+    <Overlay onClose={onClose}>
+      <div style={{ padding: '0 20px', flex: 1, display: 'flex', flexDirection: 'column', maxHeight: '75vh' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h2 style={{ fontSize: 20, fontWeight: 900, color: S.text }}>📂 Thư mục</h2>
+          <CloseBtn onClick={onClose} />
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+          <input
+            type="text"
+            placeholder="Tên thư mục mới..."
+            value={name}
+            onChange={e => setName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAdd()}
+            style={{
+              flex: 1, height: 46,
+              background: S.grayLight, border: `2px solid ${S.border}`,
+              borderRadius: S.btnRadius, padding: '0 14px',
+              fontFamily: 'inherit', fontSize: 15, fontWeight: 700,
+              color: S.text, outline: 'none', boxSizing: 'border-box',
+            }}
+          />
+          <button
+            onClick={handleAdd}
+            disabled={adding || !name.trim()}
+            style={{
+              width: 46, height: 46, borderRadius: S.btnRadius,
+              background: S.blue, border: 'none',
+              color: '#fff', fontSize: 22, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: name.trim() ? 'pointer' : 'default',
+              opacity: name.trim() ? 1 : 0.4,
+              boxShadow: `0 4px 0 ${S.blueDark}`,
+              flexShrink: 0,
+            }}
+          >+</button>
+        </div>
+
+        <div style={{ overflowY: 'auto', flex: 1, paddingBottom: 24 }}>
+          {categories.length === 0 ? (
+            <p style={{ textAlign: 'center', color: S.gray, fontWeight: 700, padding: '24px 0' }}>
+              Chưa có thư mục nào
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {categories.map(cat => (
+                <div key={cat.id} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '12px 14px', background: S.grayLight,
+                  borderRadius: S.btnRadius,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>📂</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: S.text }}>{cat.name}</span>
+                  </div>
+                  <button
+                    onClick={() => onDelete(cat.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: S.gray, padding: 4 }}
+                    onMouseEnter={e => e.currentTarget.style.color = S.red}
+                    onMouseLeave={e => e.currentTarget.style.color = S.gray}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </Overlay>
+  );
+};
+
+/* ─────────────────────────────────────────
+   ACTION CARD
+───────────────────────────────────────── */
+const ActionCard = ({ icon, badge, badgeColor, title, subtitle, accentColor, onClick }) => (
+  <div
+    onClick={onClick}
+    style={{
+      minWidth: 150, flexShrink: 0,
+      background: '#fff', border: `2px solid ${S.border}`,
+      borderRadius: S.cardRadius, padding: '14px',
+      display: 'flex', flexDirection: 'column', gap: 8,
+      cursor: 'pointer', transition: 'border-color .15s, transform .1s',
+      /* Prevent tap highlight on mobile */
+      WebkitTapHighlightColor: 'transparent',
+    }}
+    onMouseEnter={e => { e.currentTarget.style.borderColor = accentColor || S.blue; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+    onMouseLeave={e => { e.currentTarget.style.borderColor = S.border; e.currentTarget.style.transform = 'none'; }}
+  >
+    <div style={{
+      width: 40, height: 40, borderRadius: 12,
+      background: `${accentColor}18`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 20,
+    }}>{icon}</div>
+    {badge && (
+      <span style={{
+        display: 'inline-block', fontSize: 11, fontWeight: 800,
+        padding: '3px 8px', borderRadius: 6, alignSelf: 'flex-start',
+        background: `${badgeColor}22`, color: badgeColor,
+      }}>{badge}</span>
+    )}
+    <div style={{ fontSize: 14, fontWeight: 900, color: S.text, lineHeight: 1.25 }}>{title}</div>
+    <div style={{ fontSize: 12, fontWeight: 600, color: S.gray, lineHeight: 1.4 }}>{subtitle}</div>
+  </div>
+);
+
+/* ─────────────────────────────────────────
+   VOCABULARY CARD
+───────────────────────────────────────── */
+const VocabCard = ({ vocab, onEdit, onDelete }) => (
+  <div style={{
+    background: '#fff', border: `2px solid ${S.border}`,
+    borderRadius: S.cardRadius, padding: '14px 16px',
+    transition: 'border-color .15s',
+    WebkitTapHighlightColor: 'transparent',
+  }}
+    onMouseEnter={e => e.currentTarget.style.borderColor = S.blue}
+    onMouseLeave={e => e.currentTarget.style.borderColor = S.border}
+  >
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ fontSize: 18, fontWeight: 900, color: S.text }}>{vocab.word}</span>
+        <SpeakerBtn word={vocab.word} />
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span style={{
+          fontSize: 12, fontWeight: 800,
+          color: S.blue, background: S.blueLight,
+          padding: '3px 8px', borderRadius: 6,
+        }}>Cấp {vocab.level}</span>
+        <IconBtn type="edit" onClick={e => { e.stopPropagation(); onEdit(); }} />
+        <IconBtn type="delete" onClick={e => { e.stopPropagation(); onDelete(); }} />
+      </div>
+    </div>
+
+    <div style={{ fontSize: 14, fontWeight: 700, color: S.textMuted, marginBottom: vocab.example ? 4 : 0 }}>
+      {vocab.meaning}
+    </div>
+
+    {vocab.example && (
+      <div style={{ fontSize: 12, fontWeight: 600, color: S.gray, fontStyle: 'italic' }}>
+        "{vocab.example}"
+      </div>
+    )}
+  </div>
+);
+
+/* ─────────────────────────────────────────
+   MAIN PAGE
+───────────────────────────────────────── */
 const HomePage = () => {
   const navigate = useNavigate();
   const [vocabularies, setVocabularies] = useState([]);
@@ -14,25 +461,18 @@ const HomePage = () => {
 
   const [editingVocab, setEditingVocab] = useState(null);
   const [deletingVocab, setDeletingVocab] = useState(null);
-  const [editForm, setEditForm] = useState({ word: '', meaning: '', example: '' });
-  const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  
-  // Category management states
-  const [showManageCategories, setShowManageCategories] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [isAddingCategory, setIsAddingCategory] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
 
   useEffect(() => {
     fetchVocabs();
-    getCategories().then(setCategories).catch(() => {});
+    getCategories().then(setCategories).catch(() => { });
   }, []);
 
   const fetchVocabs = async () => {
     try {
       setLoading(true);
-      const data = await getAllVocabularies();
-      setVocabularies(data);
+      setVocabularies(await getAllVocabularies());
     } catch (err) {
       console.error(err);
     } finally {
@@ -40,392 +480,243 @@ const HomePage = () => {
     }
   };
 
-  const handleDeleteClick = (e, vocab) => {
-    e.stopPropagation();
-    setDeletingVocab(vocab);
+  const handleSave = async (form) => {
+    try {
+      const updated = await updateVocabulary(editingVocab.id, form);
+      setVocabularies(prev => prev.map(v => v.id === updated.id ? updated : v));
+      setEditingVocab(null);
+    } catch { alert('Lỗi khi cập nhật từ vựng!'); }
   };
 
-  const confirmDelete = async () => {
+  const handleConfirmDelete = async () => {
     if (!deletingVocab) return;
     try {
       setIsDeleting(true);
       await deleteVocabulary(deletingVocab.id);
       setVocabularies(prev => prev.filter(v => v.id !== deletingVocab.id));
       setDeletingVocab(null);
-    } catch (error) {
-      alert("Lỗi khi xóa từ vựng!");
-      console.error(error);
-    } finally {
-      setIsDeleting(false);
-    }
+    } catch { alert('Lỗi khi xóa từ vựng!'); }
+    finally { setIsDeleting(false); }
   };
 
-  const openEditModal = (e, vocab) => {
-    e.stopPropagation();
-    setEditingVocab(vocab);
-    setEditForm({ word: vocab.word, meaning: vocab.meaning, example: vocab.example || '' });
-  };
-
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    if (!editForm.word.trim() || !editForm.meaning.trim()) {
-      alert("Vui lòng điền đủ từ và nghĩa.");
-      return;
-    }
-
+  const handleAddCategory = async (name) => {
     try {
-      setIsSaving(true);
-      const updatedVocab = await updateVocabulary(editingVocab.id, editForm);
-      setVocabularies(prev => prev.map(v => v.id === updatedVocab.id ? updatedVocab : v));
-      setEditingVocab(null);
-    } catch (error) {
-      alert("Lỗi khi cập nhật từ vựng!");
-      console.error(error);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim()) return;
-    try {
-      setIsAddingCategory(true);
-      const newCat = await createCategory(newCategoryName.trim());
-      setCategories(prev => [...prev, newCat]);
-      setNewCategoryName('');
-    } catch (error) {
-      alert("Lỗi khi thêm thư mục!");
-    } finally {
-      setIsAddingCategory(false);
-    }
+      const cat = await createCategory(name);
+      setCategories(prev => [...prev, cat]);
+    } catch { alert('Lỗi khi thêm thư mục!'); }
   };
 
   const handleDeleteCategory = async (id) => {
-    if (!window.confirm("Bạn có chắc chắn muốn xóa thư mục này? Các từ vựng sẽ không bị xóa nhưng sẽ không còn thuộc thư mục này.")) return;
+    if (!window.confirm('Xóa thư mục này? Các từ vựng sẽ không bị xóa.')) return;
     try {
       await deleteCategory(id);
       setCategories(prev => prev.filter(c => c.id !== id));
       if (activeCategory === id) setActiveCategory('all');
-      // Refresh vocab list to update items that belonged to deleted category
       fetchVocabs();
-    } catch (error) {
-      alert("Lỗi khi xóa thư mục!");
-    }
+    } catch { alert('Lỗi khi xóa thư mục!'); }
   };
 
+  const filteredVocabs = activeCategory === 'all'
+    ? vocabularies
+    : vocabularies.filter(v => v.category_id?.toLowerCase() === activeCategory?.toLowerCase());
+
+  const activeCatName = categories.find(c => c.id === activeCategory)?.name || 'Thư mục';
+
   return (
-    <div className="w-full flex flex-col min-h-full pb-[40px] bg-[#F7F7F7] relative">
+    <>
+      <style>{`
+        @keyframes slideUp {
+          from { transform: translateY(60px); opacity: 0; }
+          to   { transform: translateY(0);    opacity: 1; }
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        input:focus, textarea:focus {
+          border-color: ${S.blue} !important;
+          background: #fff !important;
+          box-shadow: 0 0 0 3px ${S.blueLight} !important;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        * { -webkit-tap-highlight-color: transparent; }
+      `}</style>
 
-      {/* Banner / Vocab Cards */}
-      <div className="px-[16px] py-[24px]">
-        <div className="flex gap-[12px] overflow-x-auto snap-x hide-scrollbar pb-[8px]">
+      {/*
+        ── SCROLLABLE CONTENT AREA ──
+        Ocupa el espacio entre el header y el footer fijo.
+        padding-bottom = altura del footer + FAB strip (≈52px) + espacio extra
+      */}
+      <div style={{
+        width: '100%',
+        background: S.grayLight,
+        /* El footer tiene 64px + safe-area. Los FABs suman ~76px más.
+           Usamos un padding generoso para que el último card no quede tapado. */
+        paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px) + 88px)',
+        minHeight: '100%',
+      }}>
 
-          <div
-            className="min-w-[280px] flex-shrink-0 snap-center bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex flex-col gap-[8px] cursor-pointer hover:border-[#1CB0F6] transition-colors shadow-sm"
-            onClick={() => navigate(`/practice${activeCategory !== 'all' ? `?category=${activeCategory}` : ''}`)}
-          >
-            <div className="flex items-center justify-between mb-[4px]">
-              <div className="w-[40px] h-[40px] bg-[#1CB0F6]/10 text-[#1CB0F6] rounded-full flex items-center justify-center text-[20px]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-              </div>
-              <span className="bg-[#FF9600] text-white text-[12px] font-[800] uppercase px-[8px] py-[2px] rounded-[6px]">Luyện tập</span>
-            </div>
-            <h3 className="text-[16px] font-bold text-[#4B4B4B]">Ôn tập từ vựng</h3>
-            <p className="text-[13px] text-[#AFAFAF] font-[500]">Lật thẻ để đưa từ vựng vào trí nhớ dài hạn.</p>
+        {/* ── Action cards ── */}
+        <div style={{ padding: '20px 0 0' }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: S.gray, letterSpacing: '0.8px', textTransform: 'uppercase', padding: '0 20px', marginBottom: 12 }}>
+            Hành động nhanh
           </div>
-
-          <div
-            className="min-w-[280px] flex-shrink-0 snap-center bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex flex-col gap-[8px] cursor-pointer hover:border-[#58CC02] transition-colors shadow-sm"
-            onClick={() => navigate('/add-word')}
-          >
-            <div className="flex items-center justify-between mb-[4px]">
-              <div className="w-[40px] h-[40px] bg-[#58CC02]/10 text-[#58CC02] rounded-full flex items-center justify-center text-[20px]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              </div>
-            </div>
-            <h3 className="text-[16px] font-bold text-[#4B4B4B]">Thêm từ mới</h3>
-            <p className="text-[13px] text-[#AFAFAF] font-[500]">Lưu lại từ vựng bạn vừa gặp trên YouTube.</p>
+          <div className="hide-scrollbar" style={{ display: 'flex', gap: 12, overflowX: 'auto', padding: '0 20px 20px' }}>
+            <ActionCard
+              icon="🔥" badge="Luyện tập" badgeColor={S.orange}
+              title="Ôn tập từ vựng" subtitle="Lật thẻ ghi nhớ dài hạn"
+              accentColor={S.orange}
+              onClick={() => navigate(`/practice${activeCategory !== 'all' ? `?category=${activeCategory}` : ''}`)}
+            />
+            <ActionCard
+              icon="➕"
+              title="Thêm từ mới" subtitle="Lưu từ vừa gặp trên YouTube"
+              accentColor={S.green}
+              onClick={() => navigate('/add-word')}
+            />
+            <ActionCard
+              icon="📝" badge="Kiểm tra" badgeColor={S.purple}
+              title="Làm bài kiểm tra" subtitle="Đánh giá năng lực hiện tại"
+              accentColor={S.purple}
+              onClick={() => navigate(`/test${activeCategory !== 'all' ? `?category=${activeCategory}` : ''}`)}
+            />
           </div>
-
-          <div
-            className="min-w-[280px] flex-shrink-0 snap-center bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex flex-col gap-[8px] cursor-pointer hover:border-[#CE82FF] transition-colors shadow-sm"
-            onClick={() => navigate(`/test${activeCategory !== 'all' ? `?category=${activeCategory}` : ''}`)}
-          >
-            <div className="flex items-center justify-between mb-[4px]">
-              <div className="w-[40px] h-[40px] bg-[#CE82FF]/10 text-[#CE82FF] rounded-full flex items-center justify-center text-[20px]">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-              </div>
-              <span className="bg-[#CE82FF] text-white text-[12px] font-[800] uppercase px-[8px] py-[2px] rounded-[6px]">Kiểm tra</span>
-            </div>
-            <h3 className="text-[16px] font-bold text-[#4B4B4B]">Làm bài kiểm tra</h3>
-            <p className="text-[13px] text-[#AFAFAF] font-[500]">Đánh giá năng lực ghi nhớ từ vựng hiện tại của bạn.</p>
-          </div>
-
         </div>
-      </div>
 
-      {/* Vocabulary List */}
-      <div className="flex-1 flex flex-col px-[16px]">
-        {/* Category Filter Tabs */}
-        <div className="flex items-center gap-[8px] mb-[12px]">
-          <div className="flex-1 flex gap-[8px] overflow-x-auto pb-[4px] no-scrollbar">
+        {/* ── Category filter ── */}
+        <div className="hide-scrollbar" style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', padding: '0 20px 14px' }}>
+          <button
+            onClick={() => setActiveCategory('all')}
+            style={{
+              flexShrink: 0, padding: '6px 14px', borderRadius: 99,
+              fontSize: 13, fontWeight: 800, fontFamily: 'inherit',
+              border: `2px solid ${activeCategory === 'all' ? S.blue : S.border}`,
+              background: activeCategory === 'all' ? S.blue : '#fff',
+              color: activeCategory === 'all' ? '#fff' : S.textMuted,
+              cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .15s',
+            }}
+          >📁 Tất cả</button>
+
+          {categories.map(cat => (
             <button
-              onClick={() => setActiveCategory('all')}
-              className={`shrink-0 px-[14px] py-[6px] rounded-full text-[13px] font-[700] transition-colors border-2 ${
-                activeCategory === 'all' 
-                  ? 'bg-[#1CB0F6] border-[#1CB0F6] text-white' 
-                  : 'bg-white border-[#E5E5E5] text-[#777777] hover:border-[#1CB0F6]'
-              }`}
-            >
-              📁 Tất cả
-            </button>
-            {categories.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`shrink-0 px-[14px] py-[6px] rounded-full text-[13px] font-[700] transition-colors border-2 ${
-                  activeCategory === cat.id 
-                    ? 'bg-[#1CB0F6] border-[#1CB0F6] text-white' 
-                    : 'bg-white border-[#E5E5E5] text-[#777777] hover:border-[#1CB0F6]'
-                }`}
-              >
-                📂 {cat.name}
-              </button>
-            ))}
-          </div>
-          
-          <button 
-            onClick={() => setShowManageCategories(true)}
-            className="w-[36px] h-[36px] shrink-0 bg-white border-2 border-[#E5E5E5] rounded-full flex items-center justify-center text-[#AFAFAF] hover:text-[#1CB0F6] hover:border-[#1CB0F6] transition-all"
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
+              style={{
+                flexShrink: 0, padding: '6px 14px', borderRadius: 99,
+                fontSize: 13, fontWeight: 800, fontFamily: 'inherit',
+                border: `2px solid ${activeCategory === cat.id ? S.blue : S.border}`,
+                background: activeCategory === cat.id ? S.blue : '#fff',
+                color: activeCategory === cat.id ? '#fff' : S.textMuted,
+                cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all .15s',
+              }}
+            >📂 {cat.name}</button>
+          ))}
+
+          <button
+            onClick={() => setShowCategories(true)}
+            style={{
+              width: 34, height: 34, flexShrink: 0, marginLeft: 'auto',
+              background: '#fff', border: `2px solid ${S.border}`,
+              borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: S.gray, transition: 'all .15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = S.blue; e.currentTarget.style.color = S.blue; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = S.border; e.currentTarget.style.color = S.gray; }}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06-.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
           </button>
         </div>
 
-        {/* Vocab count */}
-        <h2 className="text-[18px] font-bold text-[#4B4B4B] mb-[16px]">
-          {activeCategory === 'all'
-            ? `Từ vựng của bạn (${vocabularies.length})`
-            : `${categories.find(c => c.id === activeCategory)?.name || 'Thư mục'} (${
-                vocabularies.filter(v => v.category_id?.toLowerCase() === activeCategory?.toLowerCase()).length
-              })`
-          }
-        </h2>
+        {/* ── Section header ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px 14px' }}>
+          <h2 style={{ fontSize: 17, fontWeight: 900, color: S.text }}>
+            {activeCategory === 'all' ? 'Từ vựng của bạn' : activeCatName}
+          </h2>
+          <span style={{ fontSize: 13, fontWeight: 700, color: S.gray }}>
+            {filteredVocabs.length} từ
+          </span>
+        </div>
 
-        {loading ? (
-          <div className="flex justify-center py-[40px]">
-            <div className="animate-spin w-8 h-8 border-4 border-[#1CB0F6] border-t-transparent rounded-full"></div>
-          </div>
-        ) : vocabularies.length === 0 ? (
-          <div className="bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[24px] text-center flex flex-col items-center">
-            <span className="text-[40px] mb-[12px]">🌱</span>
-            <p className="text-[15px] font-[600] text-[#777777] mb-[8px]">Chưa có từ vựng nào</p>
-            <p className="text-[13px] text-[#AFAFAF] font-[500]">Hãy bấm nút "Thêm từ mới" để bắt đầu hành trình học nhé!</p>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-[12px]">
-            {(activeCategory === 'all' 
-              ? vocabularies 
-              : vocabularies.filter(v => v.category_id?.toLowerCase() === activeCategory?.toLowerCase())
-            ).map((vocab) => (
-              <div key={vocab.id} className="bg-white border-2 border-[#E5E5E5] rounded-[16px] p-[16px] flex flex-col hover:border-[#1CB0F6] transition-colors cursor-pointer group">
-                <div className="flex justify-between items-start mb-[8px]">
-                  <div className="flex items-center gap-[12px]">
-                    <h3 className="text-[18px] font-bold text-[#4B4B4B]">{vocab.word}</h3>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); playAudio(vocab.word); }}
-                      className="w-[32px] h-[32px] bg-[#1CB0F6]/10 text-[#1CB0F6] rounded-[8px] flex items-center justify-center hover:bg-[#1CB0F6]/20 transition-colors"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-[8px]">
-                    <span className="text-[12px] font-[700] text-[#1CB0F6] bg-[#1CB0F6]/10 px-[8px] py-[4px] rounded-[8px]">
-                      Cấp độ {vocab.level}
-                    </span>
-
-                    <div className="flex gap-[4px] ml-[4px]">
-                      <button
-                        onClick={(e) => openEditModal(e, vocab)}
-                        className="w-[28px] h-[28px] flex items-center justify-center text-[#AFAFAF] hover:text-[#1CB0F6] bg-[#F7F7F7] rounded-[6px] transition-colors"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                      </button>
-                      <button
-                        onClick={(e) => handleDeleteClick(e, vocab)}
-                        className="w-[28px] h-[28px] flex items-center justify-center text-[#AFAFAF] hover:text-[#FF4B4B] bg-[#F7F7F7] rounded-[6px] transition-colors"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-                <p className="text-[15px] font-[600] text-[#777777] mb-[8px]">{vocab.meaning}</p>
-                {vocab.example && (
-                  <p className="text-[13px] font-[500] text-[#AFAFAF] italic">"{vocab.example}"</p>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        {/* ── Vocab list ── */}
+        <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%',
+                border: `4px solid ${S.blue}`, borderTopColor: 'transparent',
+                animation: 'spin 1s linear infinite',
+              }} />
+            </div>
+          ) : filteredVocabs.length === 0 ? (
+            <div style={{
+              background: '#fff', border: `2px solid ${S.border}`,
+              borderRadius: S.cardRadius, padding: 24,
+              textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center',
+            }}>
+              <span style={{ fontSize: 40, marginBottom: 12 }}>🌱</span>
+              <p style={{ fontSize: 15, fontWeight: 700, color: S.textMuted, marginBottom: 6 }}>Chưa có từ vựng nào</p>
+              <p style={{ fontSize: 13, color: S.gray, fontWeight: 600 }}>
+                {activeCategory === 'all'
+                  ? 'Bấm "Thêm từ mới" để bắt đầu hành trình học nhé!'
+                  : 'Thư mục này chưa có từ nào.'}
+              </p>
+            </div>
+          ) : (
+            filteredVocabs.map(vocab => (
+              <VocabCard
+                key={vocab.id}
+                vocab={vocab}
+                onEdit={() => setEditingVocab(vocab)}
+                onDelete={() => setDeletingVocab(vocab)}
+              />
+            ))
+          )}
+        </div>
       </div>
 
-      {/* Edit Modal */}
+      {/* ── Floating Action Buttons ──
+          Sits ABOVE the fixed footer (z-index 40 < 100 of footer, but positioned
+          with bottom = footer height so it clears the footer visually) */}
+      <div style={{
+        position: 'fixed',
+        bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))',
+        left: 0,
+        right: 0,
+        padding: '12px 20px',
+        background: 'linear-gradient(to top, rgba(247,247,247,0.98) 60%, rgba(247,247,247,0))',
+        display: 'flex',
+        gap: 10,
+        zIndex: 90,
+        pointerEvents: 'none', /* let clicks pass through gradient to cards */
+      }}>
+        <PressButton
+          variant="primary"
+          style={{ flex: 1, pointerEvents: 'all' }}
+          onClick={() => navigate(`/practice${activeCategory !== 'all' ? `?category=${activeCategory}` : ''}`)}
+        >
+          🔥 Ôn tập ngay
+        </PressButton>
+        <PressButton
+          variant="ghost"
+          style={{ flex: 1, pointerEvents: 'all' }}
+          onClick={() => navigate('/add-word')}
+        >
+          + Thêm từ
+        </PressButton>
+      </div>
+
+      {/* ── Modals ── */}
       {editingVocab && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-[16px]">
-          <div className="bg-white rounded-[24px] w-full max-w-[400px] p-[24px] shadow-lg animate-fade-in">
-            <div className="flex justify-between items-center mb-[20px]">
-              <h2 className="text-[20px] font-bold text-[#4B4B4B]">Sửa từ vựng</h2>
-              <button
-                onClick={() => setEditingVocab(null)}
-                className="w-[32px] h-[32px] flex items-center justify-center text-[#AFAFAF] hover:text-[#4B4B4B]"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-            </div>
-
-            <form onSubmit={handleUpdate} className="flex flex-col gap-[16px]">
-              <div>
-                <label className="block text-[14px] font-[700] text-[#777777] mb-[8px] uppercase tracking-wider">Từ tiếng Anh <span className="text-[#FF4B4B]">*</span></label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.word}
-                  onChange={(e) => setEditForm({...editForm, word: e.target.value})}
-                  className="w-full bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[16px] px-[16px] py-[12px] text-[16px] font-[600] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-colors"
-                  placeholder="Ví dụ: Hello"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[14px] font-[700] text-[#777777] mb-[8px] uppercase tracking-wider">Nghĩa tiếng Việt <span className="text-[#FF4B4B]">*</span></label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.meaning}
-                  onChange={(e) => setEditForm({...editForm, meaning: e.target.value})}
-                  className="w-full bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[16px] px-[16px] py-[12px] text-[16px] font-[600] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-colors"
-                  placeholder="Ví dụ: Xin chào"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[14px] font-[700] text-[#777777] mb-[8px] uppercase tracking-wider">Câu ví dụ (Không bắt buộc)</label>
-                <textarea
-                  rows="3"
-                  value={editForm.example}
-                  onChange={(e) => setEditForm({...editForm, example: e.target.value})}
-                  className="w-full bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[16px] px-[16px] py-[12px] text-[16px] font-[500] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-colors resize-none"
-                  placeholder="Ví dụ: Hello, how are you?"
-                />
-              </div>
-
-              <DuoButton
-                type="submit"
-                variant="primary"
-                className="w-full mt-[8px]"
-                disabled={isSaving}
-              >
-                {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
-              </DuoButton>
-            </form>
-          </div>
-        </div>
+        <EditModal vocab={editingVocab} onClose={() => setEditingVocab(null)} onSave={handleSave} />
       )}
-
-      {/* Delete Confirmation Modal */}
       {deletingVocab && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-[16px]">
-          <div className="bg-white rounded-[24px] w-full max-w-[340px] p-[24px] shadow-lg animate-fade-in text-center flex flex-col items-center">
-            <div className="w-[64px] h-[64px] bg-[#FF4B4B]/10 text-[#FF4B4B] rounded-full flex items-center justify-center mb-[16px]">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-            </div>
-
-            <h2 className="text-[20px] font-bold text-[#4B4B4B] mb-[8px]">Xóa từ vựng này?</h2>
-            <p className="text-[15px] font-[500] text-[#777777] mb-[24px]">
-              Bạn đang xóa từ <span className="font-bold text-[#4B4B4B]">"{deletingVocab.word}"</span>. Mọi quá trình học của từ này sẽ bị mất vĩnh viễn.
-            </p>
-
-            <div className="flex flex-col gap-[12px] w-full">
-              <DuoButton
-                variant="danger"
-                className="w-full"
-                onClick={confirmDelete}
-                disabled={isDeleting}
-              >
-                {isDeleting ? 'Đang xóa...' : 'Xóa luôn'}
-              </DuoButton>
-              <DuoButton
-                variant="ghost"
-                className="w-full border-2 border-[#E5E5E5]"
-                onClick={() => setDeletingVocab(null)}
-                disabled={isDeleting}
-              >
-                Giữ lại
-              </DuoButton>
-            </div>
-          </div>
-        </div>
+        <DeleteModal vocab={deletingVocab} onClose={() => setDeletingVocab(null)} onConfirm={handleConfirmDelete} isDeleting={isDeleting} />
       )}
-
-      {/* Manage Categories Modal */}
-      {showManageCategories && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-[16px]">
-          <div className="bg-white rounded-[24px] w-full max-w-[400px] p-[24px] shadow-lg animate-fade-in flex flex-col max-h-[80vh]">
-            <div className="flex justify-between items-center mb-[20px]">
-              <h2 className="text-[20px] font-bold text-[#4B4B4B]">Quản lý thư mục</h2>
-              <button
-                onClick={() => setShowManageCategories(false)}
-                className="w-[32px] h-[32px] flex items-center justify-center text-[#AFAFAF] hover:text-[#4B4B4B]"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-            </div>
-
-            <div className="flex gap-[8px] mb-[20px]">
-              <input
-                type="text"
-                className="flex-1 bg-[#F7F7F7] border-2 border-[#E5E5E5] rounded-[16px] px-[16px] py-[10px] text-[15px] font-[600] text-[#4B4B4B] outline-none focus:border-[#1CB0F6] focus:bg-white transition-all"
-                placeholder="Tên thư mục mới..."
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-              />
-              <button
-                onClick={handleAddCategory}
-                disabled={isAddingCategory || !newCategoryName.trim()}
-                className="bg-[#1CB0F6] text-white w-[44px] h-[44px] rounded-[16px] flex items-center justify-center hover:opacity-80 disabled:opacity-50 transition-all shadow-[0_4px_0_0_#1899D6] active:shadow-none active:translate-y-[2px]"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto pr-[4px] custom-scrollbar">
-              <div className="flex flex-col gap-[8px]">
-                {categories.length === 0 ? (
-                  <p className="text-center text-[#AFAFAF] py-[20px] font-[500]">Chưa có thư mục nào</p>
-                ) : (
-                  categories.map(cat => (
-                    <div key={cat.id} className="flex items-center justify-between p-[12px] bg-[#F7F7F7] rounded-[16px] border-2 border-transparent hover:border-[#E5E5E5] transition-all">
-                      <div className="flex items-center gap-[10px]">
-                        <span className="text-[18px]">📂</span>
-                        <span className="text-[15px] font-[700] text-[#4B4B4B]">{cat.name}</span>
-                      </div>
-                      <button
-                        onClick={() => handleDeleteCategory(cat.id)}
-                        className="text-[#AFAFAF] hover:text-[#FF4B4B] p-[4px] transition-colors"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+      {showCategories && (
+        <CategoriesModal categories={categories} onClose={() => setShowCategories(false)} onAdd={handleAddCategory} onDelete={handleDeleteCategory} />
       )}
-
-    </div>
+    </>
   );
 };
 
