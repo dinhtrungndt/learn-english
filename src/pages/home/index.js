@@ -196,15 +196,19 @@ const Overlay = ({ onClose, children }) => (
 /* ─────────────────────────────────────────
    EDIT MODAL
 ───────────────────────────────────────── */
-const EditModal = ({ vocab, onClose, onSave }) => {
-  const [form, setForm] = useState({ word: vocab.word, meaning: vocab.meaning, example: vocab.example || '' });
+const EditModal = ({ vocab, categories, onClose, onSave }) => {
+  const [form, setForm] = useState({ word: vocab.word, meaning: vocab.meaning, example: vocab.example || '', category_id: vocab.category_id || '' });
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.word.trim() || !form.meaning.trim()) return;
     setSaving(true);
-    await onSave(form);
+    const dataToSave = { ...form };
+    if (dataToSave.category_id === '') {
+      dataToSave.category_id = null;
+    }
+    await onSave(dataToSave);
     setSaving(false);
   };
 
@@ -240,6 +244,35 @@ const EditModal = ({ vocab, onClose, onSave }) => {
               onFocus={focused} onBlur={blurred}
               placeholder="Ví dụ: She is resilient in difficult times."
               style={{ ...inputStyle, height: 'auto', padding: '14px 16px', resize: 'none', lineHeight: 1.5 }} />
+          </Field>
+
+          <Field label="Thư mục">
+            <div style={{ position: 'relative' }}>
+              <select
+                value={form.category_id}
+                onChange={e => setForm({ ...form, category_id: e.target.value })}
+                style={{
+                  ...inputStyle,
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  paddingRight: 44,
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="">📁 Chưa phân loại</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>📂 {cat.name}</option>
+                ))}
+              </select>
+              <div style={{
+                position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)',
+                pointerEvents: 'none', color: S.gray,
+              }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+            </div>
           </Field>
 
           <PressButton type="submit" variant="primary" fullWidth disabled={saving}>
@@ -708,7 +741,7 @@ const HomePage = () => {
 
       {/* ── Modals ── */}
       {editingVocab && (
-        <EditModal vocab={editingVocab} onClose={() => setEditingVocab(null)} onSave={handleSave} />
+        <EditModal vocab={editingVocab} categories={categories} onClose={() => setEditingVocab(null)} onSave={handleSave} />
       )}
       {deletingVocab && (
         <DeleteModal vocab={deletingVocab} onClose={() => setDeletingVocab(null)} onConfirm={handleConfirmDelete} isDeleting={isDeleting} />
